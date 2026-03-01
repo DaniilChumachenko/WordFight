@@ -8,4 +8,6 @@ data class GameState(
     val isPaused: Boolean = false,
     val level: Int = 1,
     val bestScore: Int = 0,
+    val lastMissedWord: WordContent? = null,
+    val lastMissedToken: Int = 0,
 )

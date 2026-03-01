@@ -1,8 +1,14 @@
 package com.chvma.wordfight.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CornerSize
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
@@ -27,18 +33,19 @@ fun HudOverlay(
 ) {
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // Lives
         Text(
+            modifier = Modifier.weight(1f),
             text = "❤️".repeat(lives.coerceIn(0, 5)),
             fontSize = 20.sp,
         )
 
         // Score + Level
         Text(
-            text = "Score: $score  Lvl: $level",
+            modifier = Modifier.padding(end = 10.dp),
+            text = "Score: $score",
             color = Color.White,
             fontWeight = FontWeight.Bold,
             fontSize = 16.sp,
@@ -46,21 +53,32 @@ fun HudOverlay(
 
         // Controls
         // Pause/Resume
-        Button(
-            onClick = if (isPaused) onResume else onPause,
-            colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.2f)),
-        ) {
-            Text(
-                text = if (isPaused) "▶" else "⏸",
-                color = Color.White,
-                fontSize = 18.sp,
-            )
-        }
+        Text(
+            modifier =
+                Modifier
+                    .background(
+                        color = Color.White.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(16.dp)
+                    )
+                    .padding(vertical = 6.dp, horizontal = 10.dp)
+                    .clickable{
+                        if (isPaused) onResume() else onPause()
+                    },
+            text = if (isPaused) "▶" else "⏸",
+            color = Color.White,
+            fontSize = 22.sp,
+        )
 
-        // Exit
+        Spacer(Modifier.width(6.dp))
 
         Text(
-            modifier = Modifier.clickable{onExit()},
+            modifier = Modifier
+                .background(
+                    color = Color.White.copy(alpha = 0.2f),
+                    shape = RoundedCornerShape(16.dp)
+                )
+                .padding(vertical = 6.dp, horizontal = 10.dp)
+                .clickable{onExit()},
             text = "✕",
             color = Color(0xFFFF5252).copy(alpha = 0.8f),
             fontSize = 18.sp,

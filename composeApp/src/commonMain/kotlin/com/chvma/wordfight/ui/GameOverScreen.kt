@@ -12,20 +12,24 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,7 +41,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.chvma.wordfight.model.WordContent
+import com.chvma.wordfight.speech.createSpeechPlayer
 import com.chvma.wordfight.storage.createWordStorage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.painterResource
 import wordfight.composeapp.generated.resources.Res
 import wordfight.composeapp.generated.resources._1
@@ -119,10 +127,6 @@ import wordfight.composeapp.generated.resources._83
 import wordfight.composeapp.generated.resources._84
 import wordfight.composeapp.generated.resources._85
 import wordfight.composeapp.generated.resources._86
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @Composable
 private fun wordPainter(imageKey: Int): Painter = painterResource(
@@ -215,6 +219,7 @@ fun WordItem(
     word: WordContent,
     onAdd: () -> Unit,
     isSaved: Boolean = false,
+    onSpeak: (String) -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -226,11 +231,13 @@ fun WordItem(
             painter = wordPainter(word.imageKey),
             contentDescription = word.word,
             contentScale = ContentScale.Fit,
-            modifier = Modifier.size(60.dp),
+            modifier = Modifier
+                .size(60.dp)
+                .clickable { onSpeak(word.word) },
         )
-        
+
         Spacer(Modifier.width(16.dp))
-        
+
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = word.word,
@@ -244,7 +251,7 @@ fun WordItem(
                 fontSize = 14.sp,
             )
         }
-        
+
         Box(
             modifier = Modifier
                 .clickable { onAdd() }
@@ -261,6 +268,7 @@ fun WordItem(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameOverScreen(
     score: Int,
@@ -268,7 +276,10 @@ fun GameOverScreen(
     missedWords: List<WordContent>,
     onRestart: () -> Unit,
     onHome: () -> Unit = {},
+    musicEnabled: Boolean,
+    onToggleMusic: () -> Unit,
 ) {
+    val speechPlayer = remember { createSpeechPlayer() }
     val wordStorage = remember { createWordStorage() }
     var savedWords by remember { mutableStateOf<Set<String>>(emptySet()) }
     val scope = rememberCoroutineScope()
@@ -281,55 +292,80 @@ fun GameOverScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF1A1A2E))
-            .safeContentPadding()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(
-            text = "Game Over",
-            color = Color.White,
-            fontSize = 40.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-        )
+    DisposableEffect(Unit) {
+        onDispose { speechPlayer.stop() }
+    }
 
-        Spacer(Modifier.height(16.dp))
-
-        Text(
-            text = "Score: $score",
-            color = Color(0xFFFFD700),
-            fontSize = 28.sp,
-            fontWeight = FontWeight.SemiBold,
-        )
-
-        Spacer(Modifier.height(8.dp))
-
-        Text(
-            text = "Best: $bestScore",
-            color = Color.White.copy(alpha = 0.7f),
-            fontSize = 20.sp,
-        )
-
-        if (missedWords.isNotEmpty()) {
-            Spacer(Modifier.height(24.dp))
+    Scaffold(
+        containerColor = Color(0xFF1A1A2E),
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Game Over",
+                        color = Color.White,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                },
+                actions = {
+                    MusicToggleButton(
+                        isEnabled = musicEnabled,
+                        onToggle = onToggleMusic,
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFF1A1A2E),
+                ),
+            )
+        },
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Spacer(Modifier.height(8.dp))
 
             Text(
-                text = "Missed Words:",
-                color = Color.White,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
+                text = "Score: $score",
+                color = Color(0xFFFFD700),
+                fontSize = 28.sp,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
             )
 
             Spacer(Modifier.height(8.dp))
 
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-            ) {
-                items(missedWords) { word ->
+            Text(
+                text = "Best: $bestScore",
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = 20.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            if (missedWords.isNotEmpty()) {
+                Spacer(Modifier.height(24.dp))
+
+                Text(
+                    text = "Missed Words:",
+                    color = Color.White,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                ) {
+                    items(missedWords) { word ->
                     WordItem(
                         word = word,
                         onAdd = {
@@ -341,42 +377,47 @@ fun GameOverScreen(
                             }
                         },
                         isSaved = savedWords.contains(word.word),
+                        onSpeak = { text -> speechPlayer.speak(text) },
                     )
                 }
             }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Button(
-                onClick = onHome,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF757575)),
-                modifier = Modifier.weight(1f),
-            ) {
-                Text(
-                    text = "Home",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
             }
 
-            Button(
-                onClick = onRestart,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
-                modifier = Modifier.weight(1f),
+            Spacer(Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = "Play Again",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
+                Button(
+                    onClick = onHome,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF757575)),
+                ) {
+                    Text(
+                        text = "Home",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                }
+
+                Spacer(Modifier.width(16.dp))
+
+                Button(
+                    onClick = onRestart,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
+                ) {
+                    Text(
+                        text = "Play Again",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                }
             }
+
+            Spacer(Modifier.height(16.dp))
         }
     }
 }

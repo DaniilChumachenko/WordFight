@@ -18,7 +18,7 @@ object WordRepository {
         WordContent(12, "glass", "стакан", 1),
         WordContent(13, "water", "вода", 1),
         WordContent(14, "ladder", "стремянка", 1),
-        WordContent(15, "envelope", "конверт", 1),
+        WordContent(15, "letter", "письмо", 1),
         WordContent(16, "stamp", "марка", 1),
         WordContent(17, "wheel", "колесо", 1),
         WordContent(18, "flag", "флаг", 1),
@@ -28,7 +28,6 @@ object WordRepository {
         WordContent(22, "climb", "забираться", 1),
         WordContent(23, "drop", "ронять", 1),
         WordContent(24, "push", "толкать", 1),
-        WordContent(25, "pull", "тянуть", 1),
         WordContent(26, "break", "ломать", 1),
         WordContent(27, "build", "строить", 2),
         WordContent(28, "cubes", "кубики", 2),
@@ -85,6 +84,4 @@ object WordRepository {
         WordContent(85, "gloves", "перчатки", 3),
         WordContent(86, "boots", "ботинки", 3),
     )
-
-    fun forLevel(level: Int): List<WordContent> = words.filter { it.level <= level }
 }

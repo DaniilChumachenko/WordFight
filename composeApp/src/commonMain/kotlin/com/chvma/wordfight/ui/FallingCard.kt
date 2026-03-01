@@ -36,7 +36,6 @@ import wordfight.composeapp.generated.resources._21
 import wordfight.composeapp.generated.resources._22
 import wordfight.composeapp.generated.resources._23
 import wordfight.composeapp.generated.resources._24
-import wordfight.composeapp.generated.resources._25
 import wordfight.composeapp.generated.resources._26
 import wordfight.composeapp.generated.resources._27
 import wordfight.composeapp.generated.resources._28
@@ -119,7 +118,6 @@ private fun cardPainter(imageKey: Int): Painter = painterResource(
         22 -> Res.drawable._22
         23 -> Res.drawable._23
         24 -> Res.drawable._24
-        25 -> Res.drawable._25
         26 -> Res.drawable._26
         27 -> Res.drawable._27
         28 -> Res.drawable._28

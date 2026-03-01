@@ -8,8 +8,10 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import platform.AVFAudio.AVAudioEngine
 import platform.AVFAudio.AVAudioSession
-import platform.AVFAudio.AVAudioSessionCategoryRecord
-import platform.AVFAudio.AVAudioSessionModeMeasurement
+import platform.AVFAudio.AVAudioSessionCategoryPlayAndRecord
+import platform.AVFAudio.AVAudioSessionModeDefault
+import platform.AVFAudio.AVAudioSessionCategoryOptionDefaultToSpeaker
+import platform.AVFAudio.AVAudioSessionCategoryOptionMixWithOthers
 import platform.AVFAudio.AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation
 import platform.AVFAudio.setActive
 import platform.Foundation.NSLocale
@@ -55,8 +57,12 @@ class IosSpeechEngine : SpeechEngine {
             speechRecognizer = SFSpeechRecognizer(locale = locale)
 
             val audioSession = AVAudioSession.sharedInstance()
-            audioSession.setCategory(AVAudioSessionCategoryRecord, error = null)
-            audioSession.setMode(AVAudioSessionModeMeasurement, error = null)
+            audioSession.setCategory(
+                AVAudioSessionCategoryPlayAndRecord,
+                withOptions = AVAudioSessionCategoryOptionDefaultToSpeaker or AVAudioSessionCategoryOptionMixWithOthers,
+                error = null
+            )
+            audioSession.setMode(AVAudioSessionModeDefault, error = null)
             audioSession.setActive(
                 true,
                 withOptions = AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation,

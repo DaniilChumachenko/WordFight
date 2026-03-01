@@ -16,14 +16,22 @@ class GameEngine(
 
     private var timeSinceLastSpawn = 0f
     private var spawnInterval = 9f
+    private var timeSinceSpeedIncrease = 0f
+    private var speedBonus = 0f
     private var cardIdCounter = 0
     private var bestScore = 0
     private var shuffledPool: ArrayDeque<WordContent> = ArrayDeque()
     private var recentlyShown: List<WordContent> = emptyList()
     private val missedWords = mutableListOf<WordContent>()
+    private var missToken = 0
     private var fallSpeedScale = 1f
     private var spawnSpeedScale = 1f
     private var processingSlowdown = false
+
+    init {
+        // Spawn first card immediately on game start
+        timeSinceLastSpawn = spawnInterval
+    }
 
     fun update(deltaTime: Float, screenWidth: Float, screenHeight: Float) {
         if (screenWidth == 0f || screenHeight == 0f) return
@@ -42,6 +50,7 @@ class GameEngine(
         val alive = moved.filter { it.y < 1f }
 
         // Track missed words
+        var lastFallenWord: WordContent? = null
         fallen.forEach { card ->
             val wordContent = WordContent(
                 imageKey = card.imageKey,
@@ -49,9 +58,16 @@ class GameEngine(
                 translation = card.translation,
                 level = card.level,
             )
+            lastFallenWord = wordContent
             if (!missedWords.any { it.word == card.word }) {
                 missedWords.add(wordContent)
             }
+        }
+        val lastMissedToken = if (lastFallenWord != null) {
+            missToken += 1
+            missToken
+        } else {
+            current.lastMissedToken
         }
 
         var lives = current.lives - fallen.size
@@ -60,6 +76,11 @@ class GameEngine(
 
         // Spawn new cards
         timeSinceLastSpawn += deltaTime * spawnSpeedScale
+        timeSinceSpeedIncrease += deltaTime
+        while (timeSinceSpeedIncrease >= 30f) {
+            speedBonus += 0.02f
+            timeSinceSpeedIncrease -= 30f
+        }
         val updatedCards = alive.toMutableList()
         if (timeSinceLastSpawn >= spawnInterval && !isGameOver) {
             if (shuffledPool.isEmpty()) {
@@ -74,7 +95,7 @@ class GameEngine(
             if (shuffledPool.isNotEmpty()) {
                 val word = shuffledPool.removeFirst()
                 recentlyShown = (recentlyShown + word).takeLast(5)
-                val baseSpeed = 0.2f + (current.level - 1) * 0.007f
+                val baseSpeed = 0.2f + speedBonus
                 updatedCards.add(
                     Card(
                         id = "card_${cardIdCounter++}",
@@ -88,8 +109,8 @@ class GameEngine(
                     )
                 )
             }
-            timeSinceLastSpawn = 0f
-            spawnInterval = maxOf(4.5f, 9f - current.score * 0.05f)
+        timeSinceLastSpawn = 0f
+        spawnInterval = maxOf(4.5f, 9f - current.score * 0.05f)
         }
 
         // Level progression
@@ -109,6 +130,8 @@ class GameEngine(
             isGameOver = isGameOver,
             level = newLevel,
             bestScore = if (current.score > bestScore) current.score else bestScore,
+            lastMissedWord = lastFallenWord ?: current.lastMissedWord,
+            lastMissedToken = lastMissedToken,
         )
     }
 
@@ -142,12 +165,16 @@ class GameEngine(
     }
 
     fun restart() {
-        timeSinceLastSpawn = 0f
         spawnInterval = 9f
+        timeSinceSpeedIncrease = 0f
+        speedBonus = 0f
+        // Spawn first card immediately after restart
+        timeSinceLastSpawn = spawnInterval
         cardIdCounter = 0
         shuffledPool = ArrayDeque()
         recentlyShown = emptyList()
         missedWords.clear()
+        missToken = 0
         _state.value = GameState(bestScore = bestScore)
     }
 
@@ -162,9 +189,9 @@ class GameEngine(
 
     private fun levelFallScale(level: Int): Float {
         return when (level) {
-            1 -> 0.2f
-            2 -> 0.45f
-            else -> 0.7f
+            1 -> 0.8f
+            2 -> 0.9f
+            else -> 0.96f
         }
     }
 }

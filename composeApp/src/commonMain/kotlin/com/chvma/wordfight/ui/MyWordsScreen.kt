@@ -10,20 +10,25 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.unit.sp
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,11 +36,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.chvma.wordfight.model.WordContent
+import com.chvma.wordfight.speech.createSpeechPlayer
 import com.chvma.wordfight.storage.createWordStorage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.painterResource
 import wordfight.composeapp.generated.resources.Res
 import wordfight.composeapp.generated.resources._1
@@ -117,10 +124,6 @@ import wordfight.composeapp.generated.resources._83
 import wordfight.composeapp.generated.resources._84
 import wordfight.composeapp.generated.resources._85
 import wordfight.composeapp.generated.resources._86
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import androidx.compose.runtime.rememberCoroutineScope
 
 @Composable
 private fun wordPainter(imageKey: Int): Painter = painterResource(
@@ -208,10 +211,14 @@ private fun wordPainter(imageKey: Int): Painter = painterResource(
     }
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyWordsScreen(
     onBack: () -> Unit,
+    musicEnabled: Boolean,
+    onToggleMusic: () -> Unit,
 ) {
+    val speechPlayer = remember { createSpeechPlayer() }
     val wordStorage = remember { createWordStorage() }
     var words by remember { mutableStateOf<List<WordContent>>(emptyList()) }
     val scope = rememberCoroutineScope()
@@ -222,49 +229,59 @@ fun MyWordsScreen(
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF1A1A2E))
-            .safeContentPadding()
-    ) {
+    DisposableEffect(Unit) {
+        onDispose { speechPlayer.stop() }
+    }
 
-        Button(onClick = onBack){
-            Text(
-                "Back"
-            )
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-        ) {
-            Text(
-                text = "My Words",
-                color = Color.White,
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            if (words.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
+    Scaffold(
+        containerColor = Color(0xFF1A1A2E),
+        topBar = {
+            TopAppBar(
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        BackButtonContent()
+                    }
+                },
+                title = {
                     Text(
-                        text = "No saved words yet",
-                        color = Color.White.copy(alpha = 0.7f),
-                        fontSize = 18.sp,
+                        text = "My Words",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
                     )
-                }
-            } else {
-                LazyColumn {
-                    items(words) { word ->
+                },
+                actions = {
+                    MusicToggleButton(
+                        isEnabled = musicEnabled,
+                        onToggle = onToggleMusic,
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFF1A1A2E),
+                ),
+            )
+        },
+    ) { paddingValues ->
+        if (words.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "No saved words yet",
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 18.sp,
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+            ) {
+                items(words) { word ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -275,43 +292,44 @@ fun MyWordsScreen(
                                 painter = wordPainter(word.imageKey),
                                 contentDescription = word.word,
                                 contentScale = ContentScale.Fit,
-                                modifier = Modifier.size(60.dp),
+                                modifier = Modifier
+                                    .size(60.dp)
+                                    .clickable { speechPlayer.speak(word.word) },
                             )
 
-                            Spacer(Modifier.width(16.dp))
+                        Spacer(Modifier.width(16.dp))
 
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = word.word,
-                                    color = Color.White,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
-                                )
-                                Text(
-                                    text = word.translation,
-                                    color = Color.White.copy(alpha = 0.7f),
-                                    fontSize = 14.sp,
-                                )
-                            }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = word.word,
+                                color = Color.White,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Text(
+                                text = word.translation,
+                                color = Color.White.copy(alpha = 0.7f),
+                                fontSize = 14.sp,
+                            )
+                        }
 
-                            Box(
-                                modifier = Modifier
-                                    .clickable {
-                                        scope.launch(Dispatchers.Default) {
-                                            wordStorage.deleteWord(word.word)
-                                            words = words.filter { it.word != word.word }
-                                        }
+                        Box(
+                            modifier = Modifier
+                                .clickable {
+                                    scope.launch(Dispatchers.Default) {
+                                        wordStorage.deleteWord(word.word)
+                                        words = words.filter { it.word != word.word }
                                     }
-                                    .padding(8.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(
-                                    text = "×",
-                                    color = Color(0xFFFF5252),
-                                    fontSize = 28.sp,
-                                    fontWeight = FontWeight.Bold,
-                                )
-                            }
+                                }
+                                .padding(8.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = "×",
+                                color = Color(0xFFFF5252),
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
                         }
                     }
                 }

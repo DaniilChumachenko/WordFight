@@ -29,6 +29,8 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
+            implementation(libs.vosk.android)
+            implementation("androidx.compose.material:material-icons-extended:1.6.8")
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
@@ -77,4 +79,3 @@ android {
 dependencies {
     debugImplementation(libs.compose.uiTooling)
 }
-

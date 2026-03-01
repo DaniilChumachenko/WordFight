@@ -1,12 +1,18 @@
 package com.chvma.wordfight
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import com.chvma.wordfight.audio.BgmTrack
+import com.chvma.wordfight.audio.createBgmPlayer
 import com.chvma.wordfight.engine.GameEngine
 import com.chvma.wordfight.model.WordContent
 import com.chvma.wordfight.speech.createPermissionManager
@@ -34,6 +40,7 @@ fun App() {
     val speechEngine = remember { createSpeechEngine() }
     val permissionManager = remember { createPermissionManager() }
     val wordStorage = remember { createWordStorage() }
+    val bgmPlayer = remember { createBgmPlayer() }
     val scope = rememberCoroutineScope()
 
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Home) }
@@ -41,6 +48,8 @@ fun App() {
     var bestScore by remember { mutableIntStateOf(0) }
     var missedWords by remember { mutableStateOf<List<WordContent>>(emptyList()) }
     var hasPermission by remember { mutableStateOf(false) }
+    var isMenuMusicEnabled by remember { mutableStateOf(true) }
+    var isGameMusicEnabled by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
         bestScore = withContext(Dispatchers.Default) {
@@ -51,66 +60,91 @@ fun App() {
         }
     }
 
-    when (currentScreen) {
-        is Screen.Home -> {
-            HomeScreen(
-                onStartGame = {
-                    currentScreen = Screen.Game
-                },
-                onMyWords = {
-                    currentScreen = Screen.MyWords
-                },
-                hasPermission = hasPermission,
-                onPermissionGranted = {
-                    scope.launch(Dispatchers.Default) {
-                        val granted = permissionManager.hasPermission()
-                        hasPermission = granted
-                    }
-                },
-            )
+    LaunchedEffect(currentScreen, isMenuMusicEnabled, isGameMusicEnabled) {
+        val isGame = currentScreen is Screen.Game
+        val enabled = if (isGame) isGameMusicEnabled else isMenuMusicEnabled
+        if (!enabled) {
+            bgmPlayer.stop()
+            return@LaunchedEffect
         }
-        is Screen.Game -> {
-            GameScreen(
-                gameEngine = gameEngine,
-                speechEngine = speechEngine,
-                onGameOver = { score, best ->
-                    lastScore = score
-                    bestScore = best
-                    missedWords = gameEngine.getMissedWords()
-                    if (score > bestScore) {
+        val track = if (isGame) BgmTrack.Game else BgmTrack.Menu
+        bgmPlayer.startLoop(track)
+    }
+
+    DisposableEffect(Unit) {
+        onDispose { bgmPlayer.stop() }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        when (currentScreen) {
+            is Screen.Home -> {
+                HomeScreen(
+                    onStartGame = {
+                        currentScreen = Screen.Game
+                    },
+                    onMyWords = {
+                        currentScreen = Screen.MyWords
+                    },
+                    hasPermission = hasPermission,
+                    onPermissionGranted = {
                         scope.launch(Dispatchers.Default) {
-                            wordStorage.saveBestScore(score)
+                            val granted = permissionManager.hasPermission()
+                            hasPermission = granted
                         }
-                    }
-                    currentScreen = Screen.GameOver
-                },
-                onBack = {
-                    gameEngine.restart()
-                    currentScreen = Screen.Home
-                },
-            )
-        }
-        is Screen.GameOver -> {
-            GameOverScreen(
-                score = lastScore,
-                bestScore = bestScore,
-                missedWords = missedWords,
-                onRestart = {
-                    gameEngine.restart()
-                    currentScreen = Screen.Game
-                },
-                onHome = {
-                    gameEngine.restart()
-                    currentScreen = Screen.Home
-                },
-            )
-        }
-        is Screen.MyWords -> {
-            MyWordsScreen(
-                onBack = {
-                    currentScreen = Screen.Home
-                },
-            )
+                    },
+                    musicEnabled = isMenuMusicEnabled,
+                    onToggleMusic = { isMenuMusicEnabled = !isMenuMusicEnabled },
+                )
+            }
+            is Screen.Game -> {
+                GameScreen(
+                    gameEngine = gameEngine,
+                    speechEngine = speechEngine,
+                    onGameOver = { score, best ->
+                        lastScore = score
+                        bestScore = best
+                        missedWords = gameEngine.getMissedWords()
+                        if (score > bestScore) {
+                            scope.launch(Dispatchers.Default) {
+                                wordStorage.saveBestScore(score)
+                            }
+                        }
+                        currentScreen = Screen.GameOver
+                    },
+                    onBack = {
+                        gameEngine.restart()
+                        currentScreen = Screen.Home
+                    },
+                    musicEnabled = isGameMusicEnabled,
+                    onToggleMusic = { isGameMusicEnabled = !isGameMusicEnabled },
+                )
+            }
+            is Screen.GameOver -> {
+                GameOverScreen(
+                    score = lastScore,
+                    bestScore = bestScore,
+                    missedWords = missedWords,
+                    onRestart = {
+                        gameEngine.restart()
+                        currentScreen = Screen.Game
+                    },
+                    onHome = {
+                        gameEngine.restart()
+                        currentScreen = Screen.Home
+                    },
+                    musicEnabled = isMenuMusicEnabled,
+                    onToggleMusic = { isMenuMusicEnabled = !isMenuMusicEnabled },
+                )
+            }
+            is Screen.MyWords -> {
+                MyWordsScreen(
+                    onBack = {
+                        currentScreen = Screen.Home
+                    },
+                    musicEnabled = isMenuMusicEnabled,
+                    onToggleMusic = { isMenuMusicEnabled = !isMenuMusicEnabled },
+                )
+            }
         }
     }
 }
