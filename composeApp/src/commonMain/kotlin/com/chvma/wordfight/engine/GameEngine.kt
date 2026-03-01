@@ -21,6 +21,8 @@ class GameEngine(
     private var shuffledPool: ArrayDeque<WordContent> = ArrayDeque()
     private var recentlyShown: List<WordContent> = emptyList()
     private val missedWords = mutableListOf<WordContent>()
+    private var fallSpeedScale = 1f
+    private var spawnSpeedScale = 1f
 
     fun update(deltaTime: Float, screenWidth: Float, screenHeight: Float) {
         if (screenWidth == 0f || screenHeight == 0f) return
@@ -28,8 +30,9 @@ class GameEngine(
         if (current.isGameOver || current.isPaused) return
 
         // Move cards down
+        val movementDelta = deltaTime * fallSpeedScale
         val moved = current.activeCards.map { card ->
-            card.copy(y = card.y + card.speed * deltaTime)
+            card.copy(y = card.y + card.speed * movementDelta)
         }
 
         // Cards that fell off screen
@@ -53,7 +56,7 @@ class GameEngine(
         if (isGameOver) lives = 0
 
         // Spawn new cards
-        timeSinceLastSpawn += deltaTime
+        timeSinceLastSpawn += deltaTime * spawnSpeedScale
         val updatedCards = alive.toMutableList()
         if (timeSinceLastSpawn >= spawnInterval && !isGameOver) {
             if (shuffledPool.isEmpty()) {
@@ -142,5 +145,10 @@ class GameEngine(
         recentlyShown = emptyList()
         missedWords.clear()
         _state.value = GameState(bestScore = bestScore)
+    }
+
+    fun setSpeedScales(fall: Float, spawn: Float) {
+        fallSpeedScale = fall.coerceAtLeast(0f)
+        spawnSpeedScale = spawn.coerceAtLeast(0f)
     }
 }

@@ -10,13 +10,17 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 lateinit var appContext: Context
 
 class AndroidSpeechEngine : SpeechEngine {
     private val _partialFlow = MutableSharedFlow<String>(extraBufferCapacity = 64)
     override val partialFlow: Flow<String> = _partialFlow.asSharedFlow()
+    private val _processingFlow = MutableStateFlow(false)
+    override val processingFlow: Flow<Boolean> = _processingFlow.asStateFlow()
 
     private var recognizer: SpeechRecognizer? = null
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -48,9 +52,11 @@ class AndroidSpeechEngine : SpeechEngine {
                 override fun onBufferReceived(buffer: ByteArray?) {}
                 override fun onEndOfSpeech() {
                     isListening = false
+                    _processingFlow.value = true
                 }
                 override fun onError(error: Int) {
                     isListening = false
+                    _processingFlow.value = false
                     if (!isRunning) return
                     val delay = when (error) {
                         SpeechRecognizer.ERROR_RECOGNIZER_BUSY,
@@ -61,6 +67,7 @@ class AndroidSpeechEngine : SpeechEngine {
                 }
                 override fun onResults(results: Bundle?) {
                     isListening = false
+                    _processingFlow.value = false
                     // Final results are most accurate — emit all hypotheses
                     results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                         ?.forEach { _partialFlow.tryEmit(it) }
@@ -102,6 +109,7 @@ class AndroidSpeechEngine : SpeechEngine {
     override fun stop() {
         isRunning = false
         isListening = false
+        _processingFlow.value = false
         restartRunnable?.let { mainHandler.removeCallbacks(it) }
         restartRunnable = null
         recognizer?.stopListening()

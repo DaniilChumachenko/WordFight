@@ -1,22 +1,28 @@
 package com.chvma.wordfight.speech
 
+import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import platform.AVFAudio.AVAudioEngine
 import platform.AVFAudio.AVAudioSession
 import platform.AVFAudio.AVAudioSessionCategoryRecord
 import platform.AVFAudio.AVAudioSessionModeMeasurement
 import platform.AVFAudio.AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation
+import platform.AVFAudio.setActive
 import platform.Foundation.NSLocale
 import platform.Speech.SFSpeechAudioBufferRecognitionRequest
-import platform.Speech.SFSpeechRecognizer
-import platform.Speech.SFSpeechRecognizerAuthorizationStatusAuthorized
 import platform.Speech.SFSpeechRecognitionTaskHintSearch
+import platform.Speech.SFSpeechRecognizer
+import platform.Speech.SFSpeechRecognizerAuthorizationStatus
 
 class IosSpeechEngine : SpeechEngine {
     private val _partialFlow = MutableSharedFlow<String>(extraBufferCapacity = 64)
     override val partialFlow: Flow<String> = _partialFlow.asSharedFlow()
+    private val _processingFlow = MutableStateFlow(false)
+    override val processingFlow: Flow<Boolean> = _processingFlow.asStateFlow()
 
     private var speechRecognizer: SFSpeechRecognizer? = null
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest? = null
@@ -29,12 +35,13 @@ class IosSpeechEngine : SpeechEngine {
         currentLanguage = language
         isRunning = true
         SFSpeechRecognizer.requestAuthorization { status ->
-            if (status == SFSpeechRecognizerAuthorizationStatusAuthorized) {
+            if (status == SFSpeechRecognizerAuthorizationStatus.SFSpeechRecognizerAuthorizationStatusAuthorized) {
                 startRecognition()
             }
         }
     }
 
+    @OptIn(ExperimentalForeignApi::class)
     private fun startRecognition() {
         if (!isRunning) return
         try {
@@ -65,13 +72,13 @@ class IosSpeechEngine : SpeechEngine {
                     // Emit best transcription and all alternatives
                     _partialFlow.tryEmit(it.bestTranscription.formattedString)
                     it.transcriptions.forEach { transcription ->
-                        val text = transcription.formattedString
+                        val text = transcription as String
                         if (text != it.bestTranscription.formattedString) {
                             _partialFlow.tryEmit(text)
                         }
                     }
                 }
-                if (error != null || result?.isFinal == true) {
+                if (error != null || result?.isFinal() == true) {
                     audioEngine.stop()
                     inputNode.removeTapOnBus(0u)
                     recognitionRequest = null

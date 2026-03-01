@@ -53,9 +53,21 @@ fun GameScreen(
             gameEngine.tryMatch(spoken)
         }
     }
+    LaunchedEffect(Unit) {
+        speechEngine.processingFlow.collect { processing ->
+            if (processing) {
+                gameEngine.setSpeedScales(fall = 0.4f, spawn = 0.85f)
+            } else {
+                gameEngine.setSpeedScales(fall = 1f, spawn = 1f)
+            }
+        }
+    }
 
     DisposableEffect(Unit) {
-        onDispose { speechEngine.stop() }
+        onDispose {
+            speechEngine.stop()
+            gameEngine.setSpeedScales(fall = 1f, spawn = 1f)
+        }
     }
 
     // Game over trigger
