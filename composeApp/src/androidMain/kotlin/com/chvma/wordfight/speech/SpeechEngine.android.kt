@@ -47,12 +47,13 @@ class AndroidSpeechEngine : SpeechEngine {
         recognizer = SpeechRecognizer.createSpeechRecognizer(appContext).apply {
             setRecognitionListener(object : RecognitionListener {
                 override fun onReadyForSpeech(params: Bundle?) {}
-                override fun onBeginningOfSpeech() {}
+                override fun onBeginningOfSpeech() {
+                    _processingFlow.value = true
+                }
                 override fun onRmsChanged(rmsdB: Float) {}
                 override fun onBufferReceived(buffer: ByteArray?) {}
                 override fun onEndOfSpeech() {
                     isListening = false
-                    _processingFlow.value = true
                 }
                 override fun onError(error: Int) {
                     isListening = false

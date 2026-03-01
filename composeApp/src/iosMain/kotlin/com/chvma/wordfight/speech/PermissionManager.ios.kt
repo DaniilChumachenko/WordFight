@@ -1,16 +1,9 @@
 package com.chvma.wordfight.speech
 
 import platform.AVFAudio.AVAudioSession
-import platform.AVFAudio.AVAudioSessionRecordPermission
-import platform.AVFAudio.AVAudioSessionRecordPermissionDenied
 import platform.AVFAudio.AVAudioSessionRecordPermissionGranted
-import platform.AVFAudio.AVAudioSessionRecordPermissionUndetermined
 import platform.Speech.SFSpeechRecognizer
 import platform.Speech.SFSpeechRecognizerAuthorizationStatus
-import platform.Speech.SFSpeechRecognizerAuthorizationStatusAuthorized
-import platform.Speech.SFSpeechRecognizerAuthorizationStatusDenied
-import platform.Speech.SFSpeechRecognizerAuthorizationStatusNotDetermined
-import platform.Speech.SFSpeechRecognizerAuthorizationStatusRestricted
 
 class IosPermissionManager : PermissionManager {
     override suspend fun hasPermission(): Boolean {
@@ -18,7 +11,7 @@ class IosPermissionManager : PermissionManager {
         val speechStatus = SFSpeechRecognizer.authorizationStatus()
         
         return audioStatus == AVAudioSessionRecordPermissionGranted &&
-                speechStatus == SFSpeechRecognizerAuthorizationStatusAuthorized
+                speechStatus == SFSpeechRecognizerAuthorizationStatus.SFSpeechRecognizerAuthorizationStatusAuthorized
     }
 
     override suspend fun requestPermission(): Boolean {

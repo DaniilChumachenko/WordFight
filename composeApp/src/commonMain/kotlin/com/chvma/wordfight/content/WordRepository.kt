@@ -77,7 +77,7 @@ object WordRepository {
         WordContent(78, "binoculars", "бинокль", 3),
         WordContent(81, "life jacket", "спасательный жилет", 3),
         WordContent(82, "anchor", "якорь", 3),
-        WordContent(65, "paddle", "весло", 3),
+        WordContent(74, "paddle", "весло", 3),
         WordContent(79, "fishing rod", "удочка", 3),
         WordContent(80, "net", "сеть", 3),
         WordContent(83, "helmet", "шлем", 3),

@@ -13,10 +13,12 @@ import platform.AVFAudio.AVAudioSessionModeMeasurement
 import platform.AVFAudio.AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation
 import platform.AVFAudio.setActive
 import platform.Foundation.NSLocale
+import platform.Foundation.NSTimer
 import platform.Speech.SFSpeechAudioBufferRecognitionRequest
 import platform.Speech.SFSpeechRecognitionTaskHintSearch
 import platform.Speech.SFSpeechRecognizer
 import platform.Speech.SFSpeechRecognizerAuthorizationStatus
+import platform.Speech.SFTranscription
 
 class IosSpeechEngine : SpeechEngine {
     private val _partialFlow = MutableSharedFlow<String>(extraBufferCapacity = 64)
@@ -30,6 +32,7 @@ class IosSpeechEngine : SpeechEngine {
     private val audioEngine = AVAudioEngine()
     private var currentLanguage = "en-US"
     private var isRunning = false
+    private var silenceTimer: NSTimer? = null
 
     override fun start(language: String) {
         currentLanguage = language
@@ -69,16 +72,21 @@ class IosSpeechEngine : SpeechEngine {
             val inputNode = audioEngine.inputNode
             recognitionTask = speechRecognizer?.recognitionTaskWithRequest(request) { result, error ->
                 result?.let {
+                    markProcessing()
                     // Emit best transcription and all alternatives
                     _partialFlow.tryEmit(it.bestTranscription.formattedString)
                     it.transcriptions.forEach { transcription ->
-                        val text = transcription as String
+                        val t = transcription as? SFTranscription ?: return@forEach
+                        val text = t.formattedString
                         if (text != it.bestTranscription.formattedString) {
                             _partialFlow.tryEmit(text)
                         }
                     }
                 }
                 if (error != null || result?.isFinal() == true) {
+                    _processingFlow.value = false
+                    silenceTimer?.invalidate()
+                    silenceTimer = null
                     audioEngine.stop()
                     inputNode.removeTapOnBus(0u)
                     recognitionRequest = null
@@ -99,11 +107,22 @@ class IosSpeechEngine : SpeechEngine {
 
     override fun stop() {
         isRunning = false
+        _processingFlow.value = false
+        silenceTimer?.invalidate()
+        silenceTimer = null
         audioEngine.stop()
         recognitionRequest?.endAudio()
         recognitionTask?.cancel()
         recognitionRequest = null
         recognitionTask = null
+    }
+
+    private fun markProcessing() {
+        _processingFlow.value = true
+        silenceTimer?.invalidate()
+        silenceTimer = NSTimer.scheduledTimerWithTimeInterval(0.7, repeats = false) {
+            _processingFlow.value = false
+        }
     }
 }
 

@@ -2,16 +2,8 @@ package com.chvma.wordfight.speech
 
 import androidx.compose.runtime.Composable
 import platform.AVFAudio.AVAudioSession
-import platform.AVFAudio.AVAudioSessionRecordPermission
-import platform.AVFAudio.AVAudioSessionRecordPermissionDenied
-import platform.AVFAudio.AVAudioSessionRecordPermissionGranted
-import platform.AVFAudio.AVAudioSessionRecordPermissionUndetermined
 import platform.Speech.SFSpeechRecognizer
 import platform.Speech.SFSpeechRecognizerAuthorizationStatus
-import platform.Speech.SFSpeechRecognizerAuthorizationStatusAuthorized
-import platform.Speech.SFSpeechRecognizerAuthorizationStatusDenied
-import platform.Speech.SFSpeechRecognizerAuthorizationStatusNotDetermined
-import platform.Speech.SFSpeechRecognizerAuthorizationStatusRestricted
 
 @Composable
 actual fun rememberPermissionRequester(
@@ -24,7 +16,7 @@ actual fun rememberPermissionRequester(
                 if (audioGranted) {
                     // Request speech recognition permission
                     SFSpeechRecognizer.requestAuthorization { speechStatus ->
-                        val granted = speechStatus == SFSpeechRecognizerAuthorizationStatusAuthorized
+                        val granted = speechStatus == SFSpeechRecognizerAuthorizationStatus.SFSpeechRecognizerAuthorizationStatusAuthorized
                         onResult(granted)
                     }
                 } else {

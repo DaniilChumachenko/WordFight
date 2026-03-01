@@ -56,8 +56,10 @@ fun GameScreen(
     LaunchedEffect(Unit) {
         speechEngine.processingFlow.collect { processing ->
             if (processing) {
-                gameEngine.setSpeedScales(fall = 0.4f, spawn = 0.85f)
+                gameEngine.setProcessingSlowdown(true)
+                gameEngine.setSpeedScales(fall = 1f, spawn = 0.8f)
             } else {
+                gameEngine.setProcessingSlowdown(false)
                 gameEngine.setSpeedScales(fall = 1f, spawn = 1f)
             }
         }
@@ -66,6 +68,7 @@ fun GameScreen(
     DisposableEffect(Unit) {
         onDispose {
             speechEngine.stop()
+            gameEngine.setProcessingSlowdown(false)
             gameEngine.setSpeedScales(fall = 1f, spawn = 1f)
         }
     }

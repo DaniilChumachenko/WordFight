@@ -23,6 +23,7 @@ class GameEngine(
     private val missedWords = mutableListOf<WordContent>()
     private var fallSpeedScale = 1f
     private var spawnSpeedScale = 1f
+    private var processingSlowdown = false
 
     fun update(deltaTime: Float, screenWidth: Float, screenHeight: Float) {
         if (screenWidth == 0f || screenHeight == 0f) return
@@ -32,7 +33,8 @@ class GameEngine(
         // Move cards down
         val movementDelta = deltaTime * fallSpeedScale
         val moved = current.activeCards.map { card ->
-            card.copy(y = card.y + card.speed * movementDelta)
+            val levelScale = if (processingSlowdown) levelFallScale(card.level) else 1f
+            card.copy(y = card.y + card.speed * movementDelta * levelScale)
         }
 
         // Cards that fell off screen
@@ -44,7 +46,8 @@ class GameEngine(
             val wordContent = WordContent(
                 imageKey = card.imageKey,
                 word = card.word,
-                translation = card.translation
+                translation = card.translation,
+                level = card.level,
             )
             if (!missedWords.any { it.word == card.word }) {
                 missedWords.add(wordContent)
@@ -60,7 +63,7 @@ class GameEngine(
         val updatedCards = alive.toMutableList()
         if (timeSinceLastSpawn >= spawnInterval && !isGameOver) {
             if (shuffledPool.isEmpty()) {
-                val allWords = WordRepository.forLevel(current.level)
+                val allWords = WordRepository.words
                 val recentSet = recentlyShown.toSet()
                 // Put recently shown words at the end so they don't repeat right away
                 val fresh = allWords.filter { it !in recentSet }.shuffled()
@@ -78,6 +81,7 @@ class GameEngine(
                         imageKey = word.imageKey,
                         word = word.word,
                         translation = word.translation,
+                        level = word.level,
                         x = Random.nextFloat() * 0.7f + 0.15f,
                         y = -0.05f,
                         speed = baseSpeed + Random.nextFloat() * 0.02f,
@@ -150,5 +154,17 @@ class GameEngine(
     fun setSpeedScales(fall: Float, spawn: Float) {
         fallSpeedScale = fall.coerceAtLeast(0f)
         spawnSpeedScale = spawn.coerceAtLeast(0f)
+    }
+
+    fun setProcessingSlowdown(enabled: Boolean) {
+        processingSlowdown = enabled
+    }
+
+    private fun levelFallScale(level: Int): Float {
+        return when (level) {
+            1 -> 0.2f
+            2 -> 0.45f
+            else -> 0.7f
+        }
     }
 }
