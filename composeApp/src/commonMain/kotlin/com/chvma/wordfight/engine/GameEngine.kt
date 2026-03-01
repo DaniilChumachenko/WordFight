@@ -19,6 +19,8 @@ class GameEngine(
     private var cardIdCounter = 0
     private var bestScore = 0
     private var shuffledPool: ArrayDeque<WordContent> = ArrayDeque()
+    private var recentlyShown: List<WordContent> = emptyList()
+    private val missedWords = mutableListOf<WordContent>()
 
     fun update(deltaTime: Float, screenWidth: Float, screenHeight: Float) {
         if (screenWidth == 0f || screenHeight == 0f) return
@@ -34,6 +36,18 @@ class GameEngine(
         val fallen = moved.filter { it.y >= 1f }
         val alive = moved.filter { it.y < 1f }
 
+        // Track missed words
+        fallen.forEach { card ->
+            val wordContent = WordContent(
+                imageKey = card.imageKey,
+                word = card.word,
+                translation = card.translation
+            )
+            if (!missedWords.any { it.word == card.word }) {
+                missedWords.add(wordContent)
+            }
+        }
+
         var lives = current.lives - fallen.size
         val isGameOver = lives <= 0
         if (isGameOver) lives = 0
@@ -43,11 +57,18 @@ class GameEngine(
         val updatedCards = alive.toMutableList()
         if (timeSinceLastSpawn >= spawnInterval && !isGameOver) {
             if (shuffledPool.isEmpty()) {
-                shuffledPool = ArrayDeque(WordRepository.forLevel(current.level).shuffled())
+                val allWords = WordRepository.forLevel(current.level)
+                val recentSet = recentlyShown.toSet()
+                // Put recently shown words at the end so they don't repeat right away
+                val fresh = allWords.filter { it !in recentSet }.shuffled()
+                val deferred = recentlyShown.shuffled()
+                shuffledPool = ArrayDeque(fresh + deferred)
+                recentlyShown = emptyList()
             }
             if (shuffledPool.isNotEmpty()) {
                 val word = shuffledPool.removeFirst()
-                val baseSpeed = 0.06f + (current.level - 1) * 0.007f
+                recentlyShown = (recentlyShown + word).takeLast(5)
+                val baseSpeed = 0.2f + (current.level - 1) * 0.007f
                 updatedCards.add(
                     Card(
                         id = "card_${cardIdCounter++}",
@@ -109,11 +130,17 @@ class GameEngine(
         _state.value = _state.value.copy(isPaused = false)
     }
 
+    fun getMissedWords(): List<WordContent> {
+        return missedWords.toList()
+    }
+
     fun restart() {
         timeSinceLastSpawn = 0f
         spawnInterval = 9f
         cardIdCounter = 0
         shuffledPool = ArrayDeque()
+        recentlyShown = emptyList()
+        missedWords.clear()
         _state.value = GameState(bestScore = bestScore)
     }
 }

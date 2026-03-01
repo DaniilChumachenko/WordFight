@@ -40,22 +40,29 @@ class AndroidSpeechEngine : SpeechEngine {
                     if (isRunning) startListening()
                 }
                 override fun onResults(results: Bundle?) {
+                    // Final results are most accurate — emit all hypotheses
+                    results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                        ?.forEach { _partialFlow.tryEmit(it) }
                     if (isRunning) startListening()
                 }
                 override fun onPartialResults(partialResults: Bundle?) {
-                    val partial = partialResults
-                        ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                        ?.firstOrNull() ?: return
-                    _partialFlow.tryEmit(partial)
+                    // Emit all hypotheses, not just the first one
+                    partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                        ?.forEach { _partialFlow.tryEmit(it) }
                 }
                 override fun onEvent(eventType: Int, params: Bundle?) {}
             })
         }
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            // WEB_SEARCH is optimised for short queries/single words
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, currentLanguage)
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
+            // Respond faster after silence: finalise after 500 ms of silence instead of default ~1.5 s
+            putExtra("android.speech.extras.SPEECH_INPUT_COMPLETE_SILENCE_LENGTH", 500L)
+            putExtra("android.speech.extras.SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH", 300L)
+            putExtra("android.speech.extras.SPEECH_INPUT_MINIMUM_LENGTH", 200L)
         }
         recognizer?.startListening(intent)
     }

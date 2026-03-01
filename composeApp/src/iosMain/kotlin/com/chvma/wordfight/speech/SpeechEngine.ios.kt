@@ -12,6 +12,7 @@ import platform.Foundation.NSLocale
 import platform.Speech.SFSpeechAudioBufferRecognitionRequest
 import platform.Speech.SFSpeechRecognizer
 import platform.Speech.SFSpeechRecognizerAuthorizationStatusAuthorized
+import platform.Speech.SFSpeechRecognitionTaskHintSearch
 
 class IosSpeechEngine : SpeechEngine {
     private val _partialFlow = MutableSharedFlow<String>(extraBufferCapacity = 64)
@@ -55,11 +56,20 @@ class IosSpeechEngine : SpeechEngine {
             val request = SFSpeechAudioBufferRecognitionRequest()
             recognitionRequest = request
             request.shouldReportPartialResults = true
+            // Optimised for short single-word queries (faster, more accurate for game use)
+            request.taskHint = SFSpeechRecognitionTaskHintSearch
 
             val inputNode = audioEngine.inputNode
             recognitionTask = speechRecognizer?.recognitionTaskWithRequest(request) { result, error ->
                 result?.let {
+                    // Emit best transcription and all alternatives
                     _partialFlow.tryEmit(it.bestTranscription.formattedString)
+                    it.transcriptions.forEach { transcription ->
+                        val text = transcription.formattedString
+                        if (text != it.bestTranscription.formattedString) {
+                            _partialFlow.tryEmit(text)
+                        }
+                    }
                 }
                 if (error != null || result?.isFinal == true) {
                     audioEngine.stop()

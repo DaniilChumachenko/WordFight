@@ -28,6 +28,7 @@ fun GameScreen(
     gameEngine: GameEngine,
     speechEngine: SpeechEngine,
     onGameOver: (score: Int, best: Int) -> Unit,
+    onBack: () -> Unit = {},
 ) {
     val state by gameEngine.state.collectAsState()
 
@@ -92,10 +93,15 @@ fun GameScreen(
             isPaused = state.isPaused,
             onPause = { gameEngine.pause() },
             onResume = { gameEngine.resume() },
+            onExit = {
+                speechEngine.stop()
+                // Calculate final results based on current game state
+                onGameOver(state.score, state.bestScore)
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .safeContentPadding()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(vertical = 8.dp),
         )
     }
 }

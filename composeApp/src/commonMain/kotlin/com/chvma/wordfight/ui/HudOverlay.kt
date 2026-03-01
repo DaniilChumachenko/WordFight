@@ -1,5 +1,6 @@
 package com.chvma.wordfight.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.Button
@@ -10,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
@@ -20,11 +22,12 @@ fun HudOverlay(
     isPaused: Boolean,
     onPause: () -> Unit,
     onResume: () -> Unit,
+    onExit: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // Lives
@@ -41,6 +44,7 @@ fun HudOverlay(
             fontSize = 16.sp,
         )
 
+        // Controls
         // Pause/Resume
         Button(
             onClick = if (isPaused) onResume else onPause,
@@ -52,5 +56,15 @@ fun HudOverlay(
                 fontSize = 18.sp,
             )
         }
+
+        // Exit
+
+        Text(
+            modifier = Modifier.clickable{onExit()},
+            text = "✕",
+            color = Color(0xFFFF5252).copy(alpha = 0.8f),
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+        )
     }
 }
