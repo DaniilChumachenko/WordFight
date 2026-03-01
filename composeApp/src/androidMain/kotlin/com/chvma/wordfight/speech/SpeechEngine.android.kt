@@ -3,6 +3,8 @@ package com.chvma.wordfight.speech
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -17,8 +19,11 @@ class AndroidSpeechEngine : SpeechEngine {
     override val partialFlow: Flow<String> = _partialFlow.asSharedFlow()
 
     private var recognizer: SpeechRecognizer? = null
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var restartRunnable: Runnable? = null
     private var currentLanguage = "en-US"
     private var isRunning = false
+    private var isListening = false
 
     override fun start(language: String) {
         currentLanguage = language
@@ -27,23 +32,39 @@ class AndroidSpeechEngine : SpeechEngine {
     }
 
     private fun startListening() {
-        if (!isRunning) return
-        recognizer?.destroy()
+        if (!isRunning || isListening) return
+        ensureRecognizer()
+        isListening = true
+        recognizer?.startListening(buildIntent())
+    }
+
+    private fun ensureRecognizer() {
+        if (recognizer != null) return
         recognizer = SpeechRecognizer.createSpeechRecognizer(appContext).apply {
             setRecognitionListener(object : RecognitionListener {
                 override fun onReadyForSpeech(params: Bundle?) {}
                 override fun onBeginningOfSpeech() {}
                 override fun onRmsChanged(rmsdB: Float) {}
                 override fun onBufferReceived(buffer: ByteArray?) {}
-                override fun onEndOfSpeech() {}
+                override fun onEndOfSpeech() {
+                    isListening = false
+                }
                 override fun onError(error: Int) {
-                    if (isRunning) startListening()
+                    isListening = false
+                    if (!isRunning) return
+                    val delay = when (error) {
+                        SpeechRecognizer.ERROR_RECOGNIZER_BUSY,
+                        SpeechRecognizer.ERROR_CLIENT -> 400L
+                        else -> 150L
+                    }
+                    scheduleRestart(delay)
                 }
                 override fun onResults(results: Bundle?) {
+                    isListening = false
                     // Final results are most accurate — emit all hypotheses
                     results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                         ?.forEach { _partialFlow.tryEmit(it) }
-                    if (isRunning) startListening()
+                    if (isRunning) scheduleRestart(150L)
                 }
                 override fun onPartialResults(partialResults: Bundle?) {
                     // Emit all hypotheses, not just the first one
@@ -53,22 +74,36 @@ class AndroidSpeechEngine : SpeechEngine {
                 override fun onEvent(eventType: Int, params: Bundle?) {}
             })
         }
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+    }
+
+    private fun scheduleRestart(delayMs: Long) {
+        if (!isRunning) return
+        restartRunnable?.let { mainHandler.removeCallbacks(it) }
+        val r = Runnable { startListening() }
+        restartRunnable = r
+        mainHandler.postDelayed(r, delayMs)
+    }
+
+    private fun buildIntent(): Intent {
+        return Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             // WEB_SEARCH is optimised for short queries/single words
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, currentLanguage)
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
+            putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, appContext.packageName)
             // Respond faster after silence: finalise after 500 ms of silence instead of default ~1.5 s
-            putExtra("android.speech.extras.SPEECH_INPUT_COMPLETE_SILENCE_LENGTH", 500L)
-            putExtra("android.speech.extras.SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH", 300L)
-            putExtra("android.speech.extras.SPEECH_INPUT_MINIMUM_LENGTH", 200L)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 500L)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 300L)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 200L)
         }
-        recognizer?.startListening(intent)
     }
 
     override fun stop() {
         isRunning = false
+        isListening = false
+        restartRunnable?.let { mainHandler.removeCallbacks(it) }
+        restartRunnable = null
         recognizer?.stopListening()
         recognizer?.destroy()
         recognizer = null
