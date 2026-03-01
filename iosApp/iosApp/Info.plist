@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>WordFight uses speech recognition to match words you say with falling cards.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>WordFight needs the microphone to hear the words you speak.</string>
+</dict>
+</plist>
