@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.chvma.wordfight.localization.AppStrings
 import com.chvma.wordfight.speech.rememberPermissionRequester
 import com.chvma.wordfight.storage.createWordStorage
 import kotlinx.coroutines.Dispatchers
@@ -40,10 +41,12 @@ import kotlinx.coroutines.withContext
 fun HomeScreen(
     onStartGame: () -> Unit,
     onMyWords: () -> Unit,
+    onLanguages: () -> Unit,
     hasPermission: Boolean,
     onPermissionGranted: () -> Unit,
     musicEnabled: Boolean,
     onToggleMusic: () -> Unit,
+    strings: AppStrings,
 ) {
     val wordStorage = remember { createWordStorage() }
     var bestScore by remember { mutableStateOf(0) }
@@ -92,7 +95,7 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.Center,
             ) {
                 Text(
-                    text = "Word Fight!",
+                    text = strings.appTitle,
                     color = Color.White,
                     fontSize = 48.sp,
                     fontWeight = FontWeight.Bold,
@@ -103,7 +106,7 @@ fun HomeScreen(
                 Spacer(Modifier.height(64.dp))
 
                 Text(
-                    text = "Best: $bestScore",
+                    text = "${strings.bestLabel}: $bestScore",
                     color = Color(0xFFFFD700),
                     fontSize = 24.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -131,7 +134,7 @@ fun HomeScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "Tap for start!",
+                        text = strings.tapToStart,
                         color = Color(0xFF4CAF50),
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
@@ -148,7 +151,22 @@ fun HomeScreen(
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                 ) {
                     Text(
-                        text = "My words",
+                        text = strings.myWords,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                    )
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                Button(
+                    onClick = onLanguages,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9C27B0)),
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                ) {
+                    Text(
+                        text = strings.languages,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),

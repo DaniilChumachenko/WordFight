@@ -14,13 +14,17 @@ import androidx.compose.ui.Modifier
 import com.chvma.wordfight.audio.BgmTrack
 import com.chvma.wordfight.audio.createBgmPlayer
 import com.chvma.wordfight.engine.GameEngine
+import com.chvma.wordfight.localization.AppLanguage
+import com.chvma.wordfight.localization.Localization
 import com.chvma.wordfight.model.WordContent
 import com.chvma.wordfight.speech.createPermissionManager
 import com.chvma.wordfight.speech.createSpeechEngine
+import com.chvma.wordfight.storage.createSettingsStorage
 import com.chvma.wordfight.storage.createWordStorage
 import com.chvma.wordfight.ui.GameOverScreen
 import com.chvma.wordfight.ui.GameScreen
 import com.chvma.wordfight.ui.HomeScreen
+import com.chvma.wordfight.ui.LanguageScreen
 import com.chvma.wordfight.ui.MyWordsScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -32,6 +36,7 @@ sealed class Screen {
     object Game : Screen()
     object GameOver : Screen()
     object MyWords : Screen()
+    object Languages : Screen()
 }
 
 @Composable
@@ -40,6 +45,7 @@ fun App() {
     val speechEngine = remember { createSpeechEngine() }
     val permissionManager = remember { createPermissionManager() }
     val wordStorage = remember { createWordStorage() }
+    val settingsStorage = remember { createSettingsStorage() }
     val bgmPlayer = remember { createBgmPlayer() }
     val scope = rememberCoroutineScope()
 
@@ -50,6 +56,8 @@ fun App() {
     var hasPermission by remember { mutableStateOf(false) }
     var isMenuMusicEnabled by remember { mutableStateOf(true) }
     var isGameMusicEnabled by remember { mutableStateOf(true) }
+    var language by remember { mutableStateOf(AppLanguage.EN) }
+    val strings = remember(language) { Localization.strings(language) }
 
     LaunchedEffect(Unit) {
         bestScore = withContext(Dispatchers.Default) {
@@ -57,6 +65,9 @@ fun App() {
         }
         hasPermission = withContext(Dispatchers.Default) {
             permissionManager.hasPermission()
+        }
+        language = withContext(Dispatchers.Default) {
+            settingsStorage.getLanguage()
         }
     }
 
@@ -85,6 +96,9 @@ fun App() {
                     onMyWords = {
                         currentScreen = Screen.MyWords
                     },
+                    onLanguages = {
+                        currentScreen = Screen.Languages
+                    },
                     hasPermission = hasPermission,
                     onPermissionGranted = {
                         scope.launch(Dispatchers.Default) {
@@ -94,6 +108,7 @@ fun App() {
                     },
                     musicEnabled = isMenuMusicEnabled,
                     onToggleMusic = { isMenuMusicEnabled = !isMenuMusicEnabled },
+                    strings = strings,
                 )
             }
             is Screen.Game -> {
@@ -117,6 +132,8 @@ fun App() {
                     },
                     musicEnabled = isGameMusicEnabled,
                     onToggleMusic = { isGameMusicEnabled = !isGameMusicEnabled },
+                    language = language,
+                    strings = strings,
                 )
             }
             is Screen.GameOver -> {
@@ -134,6 +151,8 @@ fun App() {
                     },
                     musicEnabled = isMenuMusicEnabled,
                     onToggleMusic = { isMenuMusicEnabled = !isMenuMusicEnabled },
+                    language = language,
+                    strings = strings,
                 )
             }
             is Screen.MyWords -> {
@@ -143,6 +162,25 @@ fun App() {
                     },
                     musicEnabled = isMenuMusicEnabled,
                     onToggleMusic = { isMenuMusicEnabled = !isMenuMusicEnabled },
+                    language = language,
+                    strings = strings,
+                )
+            }
+            is Screen.Languages -> {
+                LanguageScreen(
+                    current = language,
+                    onSelect = { selected ->
+                        language = selected
+                        scope.launch(Dispatchers.Default) {
+                            settingsStorage.setLanguage(selected)
+                        }
+                    },
+                    onBack = {
+                        currentScreen = Screen.Home
+                    },
+                    musicEnabled = isMenuMusicEnabled,
+                    onToggleMusic = { isMenuMusicEnabled = !isMenuMusicEnabled },
+                    strings = strings,
                 )
             }
         }

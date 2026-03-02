@@ -41,7 +41,7 @@ class GameEngine(
         // Move cards down
         val movementDelta = deltaTime * fallSpeedScale
         val moved = current.activeCards.map { card ->
-            val levelScale = if (processingSlowdown) levelFallScale(card.level) else 1f
+            val levelScale = if (processingSlowdown) levelFallScale(card.content.level) else 1f
             card.copy(y = card.y + card.speed * movementDelta * levelScale)
         }
 
@@ -52,14 +52,9 @@ class GameEngine(
         // Track missed words
         var lastFallenWord: WordContent? = null
         fallen.forEach { card ->
-            val wordContent = WordContent(
-                imageKey = card.imageKey,
-                word = card.word,
-                translation = card.translation,
-                level = card.level,
-            )
+            val wordContent = card.content
             lastFallenWord = wordContent
-            if (!missedWords.any { it.word == card.word }) {
+            if (!missedWords.any { it.id == card.content.id }) {
                 missedWords.add(wordContent)
             }
         }
@@ -99,10 +94,7 @@ class GameEngine(
                 updatedCards.add(
                     Card(
                         id = "card_${cardIdCounter++}",
-                        imageKey = word.imageKey,
-                        word = word.word,
-                        translation = word.translation,
-                        level = word.level,
+                        content = word,
                         x = Random.nextFloat() * 0.7f + 0.15f,
                         y = -0.05f,
                         speed = baseSpeed + Random.nextFloat() * 0.02f,
@@ -138,7 +130,7 @@ class GameEngine(
     fun tryMatch(spoken: String): Boolean {
         val current = _state.value
         if (current.isGameOver || current.isPaused) return false
-        val matched = current.activeCards.firstOrNull { wordMatcher.matches(spoken, it.word) }
+        val matched = current.activeCards.firstOrNull { wordMatcher.matches(spoken, it.content.word) }
         if (matched != null) {
             val newScore = current.score + 1
             if (newScore > bestScore) bestScore = newScore

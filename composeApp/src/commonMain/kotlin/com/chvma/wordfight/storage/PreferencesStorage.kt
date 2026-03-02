@@ -1,5 +1,6 @@
 package com.chvma.wordfight.storage
 
+import com.chvma.wordfight.content.WordRepository
 import com.chvma.wordfight.model.WordContent
 
 interface PreferencesStorage {
@@ -21,7 +22,7 @@ class WordStorageImpl(
 
     override suspend fun saveWord(word: WordContent) {
         val words = getAllWords().toMutableList()
-        if (words.none { it.word == word.word }) {
+        if (words.none { it.id == word.id }) {
             words.add(word)
             saveWords(words)
         }
@@ -30,17 +31,13 @@ class WordStorageImpl(
     override suspend fun getAllWords(): List<WordContent> {
         val data = preferences.getString(wordsKey, null) ?: return emptyList()
         if (data.isEmpty()) return emptyList()
-        
+
         return try {
             data.split(separator).mapNotNull { item ->
                 val parts = item.split(itemSeparator)
-                if (parts.size == 3) {
-                    WordContent(
-                        imageKey = parts[0].toIntOrNull() ?: return@mapNotNull null,
-                        word = parts[1],
-                        translation = parts[2]
-                    )
-                } else null
+                val id = parts.firstOrNull()?.toIntOrNull() ?: return@mapNotNull null
+                WordRepository.byId(id)
+                    ?: parts.getOrNull(1)?.let { WordRepository.byWord(it) }
             }
         } catch (e: Exception) {
             emptyList()
@@ -58,7 +55,7 @@ class WordStorageImpl(
 
     private suspend fun saveWords(words: List<WordContent>) {
         val data = words.joinToString(separator) { word ->
-            "${word.imageKey}$itemSeparator${word.word}$itemSeparator${word.translation}"
+            "${word.id}"
         }
         preferences.putString(wordsKey, data)
     }

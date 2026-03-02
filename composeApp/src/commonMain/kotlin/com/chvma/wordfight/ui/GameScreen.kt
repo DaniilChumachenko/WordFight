@@ -57,6 +57,8 @@ import androidx.compose.ui.unit.sp
 import com.chvma.wordfight.engine.GameEngine
 import com.chvma.wordfight.haptics.HapticType
 import com.chvma.wordfight.haptics.createHapticEngine
+import com.chvma.wordfight.localization.AppLanguage
+import com.chvma.wordfight.localization.AppStrings
 import com.chvma.wordfight.speech.SpeechEngine
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -72,6 +74,8 @@ fun GameScreen(
     onBack: () -> Unit = {},
     musicEnabled: Boolean,
     onToggleMusic: () -> Unit,
+    language: AppLanguage,
+    strings: AppStrings,
 ) {
     val state by gameEngine.state.collectAsState()
     val haptic = remember { createHapticEngine() }
@@ -175,7 +179,7 @@ fun GameScreen(
                             fontSize = 18.sp,
                         )
                         Text(
-                            text = "Score: ${state.score}",
+                            text = "${strings.scoreLabel}: ${state.score}",
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
@@ -274,7 +278,7 @@ fun GameScreen(
                         textAlign = TextAlign.Center,
                     )
                     Text(
-                        text = missedWord?.translation.orEmpty(),
+                        text = missedWord?.translationFor(language).orEmpty(),
                         style = MaterialTheme.typography.bodyLarge,
                         color = Color(0xFFD3D3D3),
                         textAlign = TextAlign.Center,
