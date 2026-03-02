@@ -11,6 +11,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.chvma.wordfight.ads.createInterstitialAdManager
+import com.chvma.wordfight.ads.createRewardedAdManager
 import com.chvma.wordfight.audio.BgmTrack
 import com.chvma.wordfight.audio.createBgmPlayer
 import com.chvma.wordfight.engine.GameEngine
@@ -40,12 +42,14 @@ sealed class Screen {
 }
 
 @Composable
-fun App() {
+fun App(isSdkReady: Boolean = true) {
     val gameEngine = remember { GameEngine() }
     val speechEngine = remember { createSpeechEngine() }
     val permissionManager = remember { createPermissionManager() }
     val wordStorage = remember { createWordStorage() }
     val settingsStorage = remember { createSettingsStorage() }
+    val interstitialAdManager = remember { createInterstitialAdManager() }
+    val rewardedAdManager = remember { createRewardedAdManager() }
     val bgmPlayer = remember { createBgmPlayer() }
     val scope = rememberCoroutineScope()
 
@@ -57,6 +61,7 @@ fun App() {
     var isMenuMusicEnabled by remember { mutableStateOf(true) }
     var isGameMusicEnabled by remember { mutableStateOf(true) }
     var language by remember { mutableStateOf(AppLanguage.EN) }
+    var myWordsTransitions by remember { mutableIntStateOf(0) }
     val strings = remember(language) { Localization.strings(language) }
 
     LaunchedEffect(Unit) {
@@ -82,8 +87,27 @@ fun App() {
         bgmPlayer.startLoop(track)
     }
 
+    LaunchedEffect(isSdkReady) {
+        if (isSdkReady) {
+            interstitialAdManager.loadAd()
+            rewardedAdManager.loadAd()
+        }
+    }
+
     DisposableEffect(Unit) {
         onDispose { bgmPlayer.stop() }
+    }
+
+    val navigateToMyWords = {
+        myWordsTransitions += 1
+        val shouldShowInterstitial = myWordsTransitions % 5 == 0
+        if (isSdkReady && shouldShowInterstitial) {
+            interstitialAdManager.showAd {
+                currentScreen = Screen.MyWords
+            }
+        } else {
+            currentScreen = Screen.MyWords
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -93,16 +117,16 @@ fun App() {
                     onStartGame = {
                         currentScreen = Screen.Game
                     },
-                    onMyWords = {
-                        currentScreen = Screen.MyWords
-                    },
+                    onMyWords = navigateToMyWords,
                     onLanguages = {
                         currentScreen = Screen.Languages
                     },
                     hasPermission = hasPermission,
                     onPermissionGranted = {
-                        scope.launch(Dispatchers.Default) {
-                            val granted = permissionManager.hasPermission()
+                        scope.launch {
+                            val granted = withContext(Dispatchers.Default) {
+                                permissionManager.hasPermission()
+                            }
                             hasPermission = granted
                         }
                     },
@@ -134,6 +158,13 @@ fun App() {
                     onToggleMusic = { isGameMusicEnabled = !isGameMusicEnabled },
                     language = language,
                     strings = strings,
+                    onPauseWithAd = { onPaused ->
+                        if (isSdkReady) {
+                            rewardedAdManager.showAd(onPaused)
+                        } else {
+                            onPaused()
+                        }
+                    },
                 )
             }
             is Screen.GameOver -> {

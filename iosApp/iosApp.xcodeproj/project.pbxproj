@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		82326E47510F341B8F43F9E0 /* WordFight.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WordFight.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		82326E47510F341B8F43F9E0 /* PronounceWord.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PronounceWord.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -50,7 +50,7 @@
 		A910A96691A59D514A15918E /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				82326E47510F341B8F43F9E0 /* WordFight.app */,
+				82326E47510F341B8F43F9E0 /* PronounceWord.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -87,7 +87,7 @@
 			packageProductDependencies = (
 			);
 			productName = iosApp;
-			productReference = 82326E47510F341B8F43F9E0 /* WordFight.app */;
+			productReference = 82326E47510F341B8F43F9E0 /* PronounceWord.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -151,8 +151,8 @@
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "if [ \"YES\" = \"$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED\" ]; then\n  echo \"Skipping Gradle build task invocation due to OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED environment variable set to \\\"YES\\\"\"\n  exit 0\nfi\nexport JAVA_HOME=\"/Applications/Android Studio.app/Contents/jbr/Contents/Home\"\nexport PATH=\"$JAVA_HOME/bin:$PATH\"\ncd \"$SRCROOT/..\"\n./gradlew :composeApp:embedAndSignAppleFrameworkForXcode\n";
+				shellPath = /bin/sh;
+				shellScript = "if [ \"YES\" = \"$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED\" ]; then\n  echo \"Skipping Gradle build task invocation due to OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED environment variable set to \\\"YES\\\"\"\n  exit 0\nfi\nexport JAVA_HOME=\"/Applications/Android Studio.app/Contents/jbr/Contents/Home\"\nexport PATH=\"/opt/homebrew/bin:/usr/local/bin:$JAVA_HOME/bin:$PATH\"\nexport LIBRARY_PATH=\"$DEVELOPER_DIR/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos:$DEVELOPER_DIR/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphonesimulator:${LIBRARY_PATH:-}\"\nexport KOTLIN_FRAMEWORK_BUILD_TYPE=\"${KOTLIN_FRAMEWORK_BUILD_TYPE:-debug}\"\ncd \"$SRCROOT/..\"\nrun_gradle() {\n  ./gradlew :composeApp:syncPodComposeResourcesForIos :composeApp:embedAndSignPodAppleFrameworkForXcode --no-daemon --max-workers=1\n}\ncopy_compose_resources() {\n  RES_SRC=\"$SRCROOT/../composeApp/build/compose/cocoapods/compose-resources\"\n  RES_DST=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/compose-resources\"\n  if [ ! -d \"$RES_SRC\" ]; then\n    echo \"Compose resources not found at $RES_SRC\"\n    return 1\n  fi\n  rm -rf \"$RES_DST\"\n  mkdir -p \"$RES_DST\"\n  cp -R \"$RES_SRC\"/. \"$RES_DST\"/\n  echo \"Compose resources copied to $RES_DST\"\n}\nif ! run_gradle; then\n  echo \"First Gradle attempt failed, retrying once...\"\n  ./gradlew --stop || true\n  run_gradle\nfi\ncopy_compose_resources\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

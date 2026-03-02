@@ -54,6 +54,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.chvma.wordfight.ads.BannerAdView
 import com.chvma.wordfight.engine.GameEngine
 import com.chvma.wordfight.haptics.HapticType
 import com.chvma.wordfight.haptics.createHapticEngine
@@ -76,6 +77,7 @@ fun GameScreen(
     onToggleMusic: () -> Unit,
     language: AppLanguage,
     strings: AppStrings,
+    onPauseWithAd: (onPaused: () -> Unit) -> Unit,
 ) {
     val state by gameEngine.state.collectAsState()
     val haptic = remember { createHapticEngine() }
@@ -196,7 +198,12 @@ fun GameScreen(
                             )
                             .padding(vertical = 6.dp, horizontal = 10.dp)
                             .clickable {
-                                if (state.isPaused) gameEngine.resume() else gameEngine.pause()
+                                if (state.isPaused) {
+                                    gameEngine.resume()
+                                } else {
+                                    gameEngine.pause()
+                                    onPauseWithAd { }
+                                }
                             },
                         text = if (state.isPaused) "▶" else "⏸",
                         color = Color.White,
@@ -231,6 +238,9 @@ fun GameScreen(
                     containerColor = Color(0xFF1A1A2E),
                 ),
             )
+        },
+        bottomBar = {
+            BannerAdView()
         },
     ) { paddingValues ->
         Box(

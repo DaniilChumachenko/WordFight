@@ -39,7 +39,7 @@ object Localization {
     fun strings(language: AppLanguage): AppStrings {
         return when (language) {
             AppLanguage.EN -> AppStrings(
-                appTitle = "Word Fight!",
+                appTitle = "Pronounce Word!",
                 bestLabel = "Best",
                 scoreLabel = "Score",
                 tapToStart = "Tap to start!",
@@ -53,7 +53,7 @@ object Localization {
                 selectLanguage = "Select language",
             )
             AppLanguage.RU -> AppStrings(
-                appTitle = "Битва слов!",
+                appTitle = "Произнеси слово!",
                 bestLabel = "Лучший",
                 scoreLabel = "Счет",
                 tapToStart = "Нажми, чтобы начать!",
@@ -67,7 +67,7 @@ object Localization {
                 selectLanguage = "Выберите язык",
             )
             AppLanguage.UA -> AppStrings(
-                appTitle = "Битва слів!",
+                appTitle = "Назви слово!",
                 bestLabel = "Найкращий",
                 scoreLabel = "Рахунок",
                 tapToStart = "Натисни, щоб почати!",
@@ -81,7 +81,7 @@ object Localization {
                 selectLanguage = "Оберіть мову",
             )
             AppLanguage.FR -> AppStrings(
-                appTitle = "Bataille de mots !",
+                appTitle = "Prononcer le mot!",
                 bestLabel = "Meilleur",
                 scoreLabel = "Score",
                 tapToStart = "Appuie pour commencer !",
@@ -95,7 +95,7 @@ object Localization {
                 selectLanguage = "Choisir la langue",
             )
             AppLanguage.ES -> AppStrings(
-                appTitle = "Batalla de palabras!",
+                appTitle = "Pronunciar palabra!",
                 bestLabel = "Mejor",
                 scoreLabel = "Puntuación",
                 tapToStart = "Toca para empezar!",
