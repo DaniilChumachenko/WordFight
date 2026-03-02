@@ -9,7 +9,15 @@ class AndroidBgmPlayer : BgmPlayer {
     private var currentTrack: BgmTrack? = null
 
     override fun startLoop(track: BgmTrack) {
-        if (player?.isPlaying == true && currentTrack == track) return
+        if (currentTrack == track) {
+            player?.let { existing ->
+                existing.setVolume(track.volume, track.volume)
+                if (!existing.isPlaying) {
+                    existing.start()
+                }
+                return
+            }
+        }
         stop()
         val resId = when (track) {
             BgmTrack.Menu -> R.raw.main_music
@@ -21,6 +29,20 @@ class AndroidBgmPlayer : BgmPlayer {
         p.start()
         player = p
         currentTrack = track
+    }
+
+    override fun pause() {
+        val p = player ?: return
+        if (p.isPlaying) {
+            p.pause()
+        }
+    }
+
+    override fun resume() {
+        val p = player ?: return
+        if (!p.isPlaying) {
+            p.start()
+        }
     }
 
     override fun stop() {

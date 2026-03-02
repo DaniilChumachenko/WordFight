@@ -10,7 +10,15 @@ class IosBgmPlayer : BgmPlayer {
 
     @OptIn(ExperimentalForeignApi::class)
     override fun startLoop(track: BgmTrack) {
-        if (player?.playing == true && currentTrack == track) return
+        if (currentTrack == track) {
+            player?.let { existing ->
+                existing.volume = track.volume
+                if (!existing.playing) {
+                    existing.play()
+                }
+                return
+            }
+        }
         stop()
         val url = NSBundle.mainBundle.URLForResource(track.fileName, "mp3") ?: return
         val p = AVAudioPlayer(contentsOfURL = url, error = null) ?: return
@@ -20,6 +28,17 @@ class IosBgmPlayer : BgmPlayer {
         p.play()
         player = p
         currentTrack = track
+    }
+
+    override fun pause() {
+        player?.pause()
+    }
+
+    override fun resume() {
+        val p = player ?: return
+        if (!p.playing) {
+            p.play()
+        }
     }
 
     override fun stop() {

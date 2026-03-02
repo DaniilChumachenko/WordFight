@@ -7,6 +7,8 @@ enum class BgmTrack(val fileName: String, val volume: Float) {
 
 interface BgmPlayer {
     fun startLoop(track: BgmTrack)
+    fun pause()
+    fun resume()
     fun stop()
 }
 

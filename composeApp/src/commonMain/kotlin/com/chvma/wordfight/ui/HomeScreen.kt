@@ -2,6 +2,7 @@ package com.chvma.wordfight.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -25,9 +27,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.chvma.wordfight.ads.BannerAdView
@@ -65,8 +68,20 @@ fun HomeScreen(
         }
     }
 
+    fun startGameFromTap() {
+        if (hasPermission) {
+            onStartGame()
+        } else {
+            permissionRequester.requestPermission { granted ->
+                if (granted) {
+                    onStartGame()
+                }
+            }
+        }
+    }
+
     Scaffold(
-        containerColor = Color(0xFF1A1A2E),
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = {},
@@ -77,7 +92,7 @@ fun HomeScreen(
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A1A2E),
+                    containerColor = MaterialTheme.colorScheme.surface,
                 ),
             )
         },
@@ -88,7 +103,13 @@ fun HomeScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
+                .padding(paddingValues)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                ) {
+                    startGameFromTap()
+                },
             contentAlignment = Alignment.Center,
         ) {
             Column(
@@ -100,18 +121,21 @@ fun HomeScreen(
             ) {
                 Text(
                     text = strings.appTitle,
-                    color = Color.White,
-                    fontSize = 48.sp,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontSize = 44.sp,
+                    lineHeight = 56.sp,
                     fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth(),
                 )
 
-                Spacer(Modifier.height(64.dp))
+                Spacer(Modifier.height(30.dp))
 
                 Text(
                     text = "${strings.bestLabel}: $bestScore",
-                    color = Color(0xFFFFD700),
+                    color = MaterialTheme.colorScheme.primary,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.SemiBold,
                     textAlign = TextAlign.Center,
@@ -123,23 +147,12 @@ fun HomeScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable {
-                            if (hasPermission) {
-                                onStartGame()
-                            } else {
-                                permissionRequester.requestPermission { granted ->
-                                    if (granted) {
-                                        onStartGame()
-                                    }
-                                }
-                            }
-                        }
                         .padding(16.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = strings.tapToStart,
-                        color = Color(0xFF4CAF50),
+                        color = MaterialTheme.colorScheme.secondary,
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
@@ -151,7 +164,7 @@ fun HomeScreen(
 
                 Button(
                     onClick = onMyWords,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                 ) {
                     Text(
@@ -166,7 +179,7 @@ fun HomeScreen(
 
                 Button(
                     onClick = onLanguages,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9C27B0)),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary),
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                 ) {
                     Text(

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -21,7 +22,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,7 +40,7 @@ fun LanguageScreen(
     strings: AppStrings,
 ) {
     Scaffold(
-        containerColor = Color(0xFF1A1A2E),
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 navigationIcon = {
@@ -51,7 +51,7 @@ fun LanguageScreen(
                 title = {
                     Text(
                         text = strings.selectLanguage,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                     )
@@ -63,7 +63,7 @@ fun LanguageScreen(
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A1A2E),
+                    containerColor = MaterialTheme.colorScheme.surface,
                 ),
             )
         },
@@ -84,7 +84,11 @@ fun LanguageScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(
-                            color = if (isSelected) Color(0xFF2D2A4A) else Color(0xFF23233A),
+                            color = if (isSelected) {
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+                            } else {
+                                MaterialTheme.colorScheme.surface
+                            },
                             shape = RoundedCornerShape(14.dp),
                         )
                         .clickable { onSelect(language) }
@@ -94,27 +98,27 @@ fun LanguageScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = language.nativeName,
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.SemiBold,
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
                             text = language.code.uppercase(),
-                            color = Color.White.copy(alpha = 0.6f),
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                             fontSize = 12.sp,
                         )
                     }
                     if (isSelected) {
                         Box(
                             modifier = Modifier
-                                .background(Color(0xFF4CAF50), RoundedCornerShape(10.dp))
+                                .background(MaterialTheme.colorScheme.secondary, RoundedCornerShape(10.dp))
                                 .padding(horizontal = 10.dp, vertical = 6.dp),
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
                                 text = "✓",
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onSecondary,
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
                             )

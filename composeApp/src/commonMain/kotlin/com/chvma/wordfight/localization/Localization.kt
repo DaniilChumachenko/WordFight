@@ -33,6 +33,10 @@ data class AppStrings(
     val home: String,
     val playAgain: String,
     val selectLanguage: String,
+    val reviveLifeTitle: String,
+    val reviveLifeMessage: String,
+    val watchVideo: String,
+    val noThanks: String,
 )
 
 object Localization {
@@ -51,6 +55,10 @@ object Localization {
                 home = "Home",
                 playAgain = "Play Again",
                 selectLanguage = "Select language",
+                reviveLifeTitle = "Restore one life?",
+                reviveLifeMessage = "Watch a rewarded video to continue.",
+                watchVideo = "Watch video",
+                noThanks = "No, results",
             )
             AppLanguage.RU -> AppStrings(
                 appTitle = "Произнеси слово!",
@@ -65,6 +73,10 @@ object Localization {
                 home = "Главная",
                 playAgain = "Играть снова",
                 selectLanguage = "Выберите язык",
+                reviveLifeTitle = "Хотите восстановить одну жизнь?",
+                reviveLifeMessage = "Посмотрите рекламное видео и продолжите игру.",
+                watchVideo = "Посмотреть видео",
+                noThanks = "Нет, результат",
             )
             AppLanguage.UA -> AppStrings(
                 appTitle = "Назви слово!",
@@ -79,6 +91,10 @@ object Localization {
                 home = "Головна",
                 playAgain = "Грати знову",
                 selectLanguage = "Оберіть мову",
+                reviveLifeTitle = "Хочете відновити одне життя?",
+                reviveLifeMessage = "Перегляньте рекламне відео та продовжуйте гру.",
+                watchVideo = "Переглянути відео",
+                noThanks = "Ні, результат",
             )
             AppLanguage.FR -> AppStrings(
                 appTitle = "Prononcer le mot!",
@@ -93,6 +109,10 @@ object Localization {
                 home = "Accueil",
                 playAgain = "Rejouer",
                 selectLanguage = "Choisir la langue",
+                reviveLifeTitle = "Récupérer une vie ?",
+                reviveLifeMessage = "Regardez une vidéo récompensée pour continuer.",
+                watchVideo = "Voir la vidéo",
+                noThanks = "Non, résultat",
             )
             AppLanguage.ES -> AppStrings(
                 appTitle = "Pronunciar palabra!",
@@ -107,6 +127,10 @@ object Localization {
                 home = "Inicio",
                 playAgain = "Jugar de nuevo",
                 selectLanguage = "Elige idioma",
+                reviveLifeTitle = "¿Recuperar una vida?",
+                reviveLifeMessage = "Mira un video con recompensa para continuar.",
+                watchVideo = "Ver video",
+                noThanks = "No, resultado",
             )
         }
     }

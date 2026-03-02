@@ -13,6 +13,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,10 +25,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.Image
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -39,15 +44,18 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -61,10 +69,20 @@ import com.chvma.wordfight.haptics.createHapticEngine
 import com.chvma.wordfight.localization.AppLanguage
 import com.chvma.wordfight.localization.AppStrings
 import com.chvma.wordfight.speech.SpeechEngine
+import io.github.alexzhirkevich.compottie.Compottie
+import io.github.alexzhirkevich.compottie.LottieCompositionSpec
+import io.github.alexzhirkevich.compottie.animateLottieCompositionAsState
+import io.github.alexzhirkevich.compottie.rememberLottieComposition
+import io.github.alexzhirkevich.compottie.rememberLottiePainter
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import org.jetbrains.compose.resources.ExperimentalResourceApi
+import wordfight.composeapp.generated.resources.Res
 import kotlin.math.PI
 import kotlin.math.sin
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,6 +96,7 @@ fun GameScreen(
     language: AppLanguage,
     strings: AppStrings,
     onPauseWithAd: (onPaused: () -> Unit) -> Unit,
+    onReviveWithAd: (onResult: (rewarded: Boolean) -> Unit) -> Unit,
 ) {
     val state by gameEngine.state.collectAsState()
     val haptic = remember { createHapticEngine() }
@@ -88,6 +107,13 @@ fun GameScreen(
     var isSpeaking by remember { mutableStateOf(false) }
     var damageActive by remember { mutableStateOf(false) }
     var damageToken by remember { mutableIntStateOf(0) }
+    var showReviveDialog by remember { mutableStateOf(false) }
+    var reviveInProgress by remember { mutableStateOf(false) }
+    var gameOverHandled by remember { mutableStateOf(false) }
+    var autoPausedByLifecycle by remember { mutableStateOf(false) }
+    var appWasBackgrounded by remember { mutableStateOf(false) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val latestState by rememberUpdatedState(state)
 
     var screenWidth by remember { mutableFloatStateOf(0f) }
     var screenHeight by remember { mutableFloatStateOf(0f) }
@@ -130,12 +156,77 @@ fun GameScreen(
             gameEngine.setSpeedScales(fall = 1f, spawn = 1f)
         }
     }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_STOP -> {
+                    appWasBackgrounded = true
+                    speechEngine.stop()
+                    val s = latestState
+                    if (!s.isGameOver && !s.isPaused) {
+                        gameEngine.pause()
+                        autoPausedByLifecycle = true
+                    } else {
+                        autoPausedByLifecycle = false
+                    }
+                }
+                Lifecycle.Event.ON_START -> {
+                    if (appWasBackgrounded) {
+                        val s = latestState
+                        if (!s.isGameOver) {
+                            speechEngine.start("en-US")
+                        }
+                        if (autoPausedByLifecycle && !s.isGameOver) {
+                            gameEngine.resume()
+                        }
+                        autoPausedByLifecycle = false
+                        appWasBackgrounded = false
+                    }
+                }
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
-    // Game over trigger
-    LaunchedEffect(state.isGameOver) {
-        if (state.isGameOver) {
+    fun finishGame() {
+        if (gameOverHandled) return
+        gameOverHandled = true
+        showReviveDialog = false
+        onGameOver(state.score, state.bestScore)
+    }
+
+    // Game over with revive offer
+    LaunchedEffect(
+        state.isGameOver,
+        state.lives,
+        state.revivesUsed,
+        showReviveDialog,
+        reviveInProgress,
+        gameOverHandled,
+    ) {
+        if (state.isGameOver &&
+            state.lives <= 0 &&
+            !showReviveDialog &&
+            !reviveInProgress &&
+            !gameOverHandled
+        ) {
             haptic.perform(HapticType.GameOver)
-            onGameOver(state.score, state.bestScore)
+            if (state.revivesUsed < GameEngine.MAX_REVIVES_PER_GAME) {
+                showReviveDialog = true
+            } else {
+                finishGame()
+            }
+        }
+    }
+    LaunchedEffect(state.isGameOver) {
+        if (!state.isGameOver) {
+            showReviveDialog = false
+            reviveInProgress = false
+            gameOverHandled = false
         }
     }
     LaunchedEffect(state.lives) {
@@ -168,7 +259,7 @@ fun GameScreen(
     }
 
     Scaffold(
-        containerColor = Color(0xFF1A1A2E),
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = {
@@ -182,7 +273,7 @@ fun GameScreen(
                         )
                         Text(
                             text = "${strings.scoreLabel}: ${state.score}",
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
                         )
@@ -193,7 +284,7 @@ fun GameScreen(
                     Text(
                         modifier = Modifier
                             .background(
-                                color = Color.White.copy(alpha = 0.2f),
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
                                 shape = RoundedCornerShape(16.dp),
                             )
                             .padding(vertical = 6.dp, horizontal = 10.dp)
@@ -206,7 +297,7 @@ fun GameScreen(
                                 }
                             },
                         text = if (state.isPaused) "▶" else "⏸",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 20.sp,
                     )
                     Spacer(Modifier.width(6.dp))
@@ -214,7 +305,7 @@ fun GameScreen(
                     Text(
                         modifier = Modifier
                             .background(
-                                color = Color.White.copy(alpha = 0.2f),
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
                                 shape = RoundedCornerShape(16.dp),
                             )
                             .padding(vertical = 6.dp, horizontal = 10.dp)
@@ -223,7 +314,7 @@ fun GameScreen(
                                 onGameOver(state.score, state.bestScore)
                             },
                         text = "✕",
-                        color = Color(0xFFFF5252).copy(alpha = 0.8f),
+                        color = MaterialTheme.colorScheme.error,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                     )
@@ -235,7 +326,7 @@ fun GameScreen(
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A1A2E),
+                    containerColor = MaterialTheme.colorScheme.surface,
                 ),
             )
         },
@@ -252,6 +343,12 @@ fun GameScreen(
                     screenHeight = it.height.toFloat()
                 }
         ) {
+            AnimatedSkyBackground(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .alpha(0.45f),
+            )
+
             // Falling cards
             if (screenWidth > 0f && screenHeight > 0f) {
                 state.activeCards.forEach { card ->
@@ -277,20 +374,23 @@ fun GameScreen(
                 Column(
                     modifier = Modifier
                         .border(2.dp, gradientBorder, RoundedCornerShape(14.dp))
-                        .background(Color(0xCC0E0E16), shape = RoundedCornerShape(14.dp))
+                        .background(
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                            shape = RoundedCornerShape(14.dp),
+                        )
                         .padding(horizontal = 22.dp, vertical = 14.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
                         text = missedWord?.word.orEmpty(),
                         style = MaterialTheme.typography.titleLarge,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         textAlign = TextAlign.Center,
                     )
                     Text(
                         text = missedWord?.translationFor(language).orEmpty(),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = Color(0xFFD3D3D3),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
                         textAlign = TextAlign.Center,
                     )
                 }
@@ -307,8 +407,81 @@ fun GameScreen(
                     .fillMaxWidth()
                     .height(14.dp),
             )
+
+            if (showReviveDialog) {
+                AlertDialog(
+                    onDismissRequest = {
+                        if (!reviveInProgress) finishGame()
+                    },
+                    containerColor = AlertDialogDefaults.containerColor,
+                    titleContentColor = AlertDialogDefaults.titleContentColor,
+                    textContentColor = AlertDialogDefaults.textContentColor,
+                    title = { Text(text = strings.reviveLifeTitle) },
+                    text = { Text(text = strings.reviveLifeMessage) },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                if (reviveInProgress) return@TextButton
+                                reviveInProgress = true
+                                showReviveDialog = false
+                                onReviveWithAd { rewarded ->
+                                    reviveInProgress = false
+                                    if (rewarded) {
+                                        if (!gameEngine.reviveOneLife()) {
+                                            finishGame()
+                                        }
+                                    } else {
+                                        finishGame()
+                                    }
+                                }
+                            }
+                        ) {
+                            Text(strings.watchVideo)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = {
+                                if (!reviveInProgress) finishGame()
+                            }
+                        ) {
+                            Text(strings.noThanks)
+                        }
+                    },
+                )
+            }
         }
     }
+}
+
+@OptIn(ExperimentalResourceApi::class)
+@Composable
+private fun AnimatedSkyBackground(modifier: Modifier = Modifier) {
+    val nightComposition by rememberLottieComposition {
+        LottieCompositionSpec.JsonString(
+            Res.readBytes("files/moon_night_sky.json").decodeToString(),
+        )
+    }
+    val dayComposition by rememberLottieComposition {
+        LottieCompositionSpec.JsonString(
+            Res.readBytes("files/day_sky.json").decodeToString(),
+        )
+    }
+    val composition = if (isSystemInDarkTheme()) nightComposition else dayComposition
+    val progress by animateLottieCompositionAsState(
+        composition = composition,
+        iterations = Compottie.IterateForever,
+    )
+
+    Image(
+        painter = rememberLottiePainter(
+            composition = composition,
+            progress = { progress },
+        ),
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        modifier = modifier,
+    )
 }
 
 private enum class StatusBarMode {

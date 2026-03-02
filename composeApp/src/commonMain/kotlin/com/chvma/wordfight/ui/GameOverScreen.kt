@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -19,6 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -33,7 +35,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -78,13 +79,13 @@ fun WordItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = word.word,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
             )
             Text(
                 text = word.translationFor(language),
-                color = Color.White.copy(alpha = 0.7f),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 fontSize = 14.sp,
             )
         }
@@ -97,7 +98,7 @@ fun WordItem(
         ) {
             Text(
                 text = if (isSaved) "✓" else "+",
-                color = if (isSaved) Color(0xFF4CAF50) else Color(0xFF2196F3),
+                color = if (isSaved) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
             )
@@ -136,13 +137,13 @@ fun GameOverScreen(
     }
 
     Scaffold(
-        containerColor = Color(0xFF1A1A2E),
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = {
                     Text(
                         text = strings.gameOver,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                     )
@@ -154,7 +155,7 @@ fun GameOverScreen(
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A1A2E),
+                    containerColor = MaterialTheme.colorScheme.surface,
                 ),
             )
         },
@@ -162,105 +163,112 @@ fun GameOverScreen(
             BannerAdView()
         },
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            contentAlignment = Alignment.Center,
         ) {
-            Spacer(Modifier.height(8.dp))
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    text = strings.gameOver + "!",
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 36.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                )
 
-            Text(
-                text = "${strings.scoreLabel}: $score",
-                color = Color(0xFFFFD700),
-                fontSize = 28.sp,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = "${strings.bestLabel}: $bestScore",
-                color = Color.White.copy(alpha = 0.7f),
-                fontSize = 20.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            if (missedWords.isNotEmpty()) {
                 Spacer(Modifier.height(24.dp))
 
                 Text(
-                    text = "${strings.missedWords}:",
-                    color = Color.White,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
+                    text = "${strings.scoreLabel}: $score",
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.SemiBold,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(),
                 )
 
                 Spacer(Modifier.height(8.dp))
 
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                ) {
-                    items(missedWords) { word ->
-                        WordItem(
-                            word = word,
-                            onAdd = {
-                                if (!savedWords.contains(word.word)) {
-                                    scope.launch(Dispatchers.Default) {
-                                        wordStorage.saveWord(word)
-                                        savedWords = savedWords + word.word
+                Text(
+                    text = "${strings.bestLabel}: $bestScore",
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                    fontSize = 20.sp,
+                    textAlign = TextAlign.Center,
+                )
+
+                if (missedWords.isNotEmpty()) {
+                    Spacer(Modifier.height(24.dp))
+
+                    Text(
+                        text = "${strings.missedWords}:",
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                    )
+
+                    Spacer(Modifier.height(8.dp))
+
+                    LazyColumn(
+                        modifier = Modifier.heightIn(max = 200.dp),
+                    ) {
+                        items(missedWords) { word ->
+                            WordItem(
+                                word = word,
+                                onAdd = {
+                                    if (!savedWords.contains(word.word)) {
+                                        scope.launch(Dispatchers.Default) {
+                                            wordStorage.saveWord(word)
+                                            savedWords = savedWords + word.word
+                                        }
                                     }
-                                }
-                            },
-                            isSaved = savedWords.contains(word.word),
-                            onSpeak = { text -> speechPlayer.speak(text) },
-                            language = language,
+                                },
+                                isSaved = savedWords.contains(word.word),
+                                onSpeak = { text -> speechPlayer.speak(text) },
+                                language = language,
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Button(
+                        onClick = onHome,
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                    ) {
+                        Text(
+                            text = strings.home,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    }
+
+                    Spacer(Modifier.width(16.dp))
+
+                    Button(
+                        onClick = onRestart,
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    ) {
+                        Text(
+                            text = strings.playAgain,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                         )
                     }
                 }
             }
-
-            Spacer(Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Button(
-                    onClick = onHome,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF757575)),
-                ) {
-                    Text(
-                        text = strings.home,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    )
-                }
-
-                Spacer(Modifier.width(16.dp))
-
-                Button(
-                    onClick = onRestart,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
-                ) {
-                    Text(
-                        text = strings.playAgain,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(16.dp))
         }
     }
 }

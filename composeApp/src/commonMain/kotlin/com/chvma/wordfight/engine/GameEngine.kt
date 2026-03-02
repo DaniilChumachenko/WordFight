@@ -11,6 +11,10 @@ import kotlin.random.Random
 class GameEngine(
     private val wordMatcher: WordMatcher = WordMatcher(),
 ) {
+    companion object {
+        const val MAX_REVIVES_PER_GAME = 3
+    }
+
     private val _state = MutableStateFlow(GameState())
     val state: StateFlow<GameState> = _state
 
@@ -150,6 +154,23 @@ class GameEngine(
 
     fun resume() {
         _state.value = _state.value.copy(isPaused = false)
+    }
+
+    fun reviveOneLife(): Boolean {
+        val current = _state.value
+        if (!canRevive()) return false
+        _state.value = current.copy(
+            lives = 1,
+            revivesUsed = current.revivesUsed + 1,
+            isGameOver = false,
+            isPaused = false,
+        )
+        return true
+    }
+
+    fun canRevive(): Boolean {
+        val current = _state.value
+        return current.isGameOver && current.lives <= 0 && current.revivesUsed < MAX_REVIVES_PER_GAME
     }
 
     fun getMissedWords(): List<WordContent> {

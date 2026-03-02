@@ -42,31 +42,33 @@ actual class RewardedAdManager {
         )
     }
 
-    actual fun showAd(onAdDismissed: () -> Unit) {
+    actual fun showAd(onAdClosed: (rewarded: Boolean) -> Unit) {
         val activity = ActivityProvider.getActivity()
         val ad = rewardedAd
 
         if (activity == null || ad == null) {
-            onAdDismissed()
+            loadAd()
+            onAdClosed(false)
             return
         }
 
+        var rewardEarned = false
         ad.fullScreenContentCallback = object : FullScreenContentCallback() {
             override fun onAdDismissedFullScreenContent() {
                 rewardedAd = null
                 loadAd()
-                onAdDismissed()
+                onAdClosed(rewardEarned)
             }
 
             override fun onAdFailedToShowFullScreenContent(error: AdError) {
                 rewardedAd = null
                 loadAd()
-                onAdDismissed()
+                onAdClosed(false)
             }
         }
 
         ad.show(activity) {
-            // Reward value is not used now, pause action is triggered on dismiss.
+            rewardEarned = true
         }
     }
 

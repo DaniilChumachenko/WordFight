@@ -40,22 +40,24 @@ actual class RewardedAdManager {
         }
     }
 
-    actual fun showAd(onAdDismissed: () -> Unit) {
+    actual fun showAd(onAdClosed: (rewarded: Boolean) -> Unit) {
         dispatch_async(dispatch_get_main_queue()) {
             val viewController = ViewControllerProvider.getViewController()
             val ad = rewardedAd
 
             if (viewController == null || ad == null) {
-                onAdDismissed()
+                loadAd()
+                onAdClosed(false)
                 return@dispatch_async
             }
 
+            var rewardEarned = false
             currentDelegate = object : NSObject(), GADFullScreenContentDelegateProtocol {
                 override fun adDidDismissFullScreenContent(ad: GADFullScreenPresentingAdProtocol) {
                     rewardedAd = null
                     currentDelegate = null
                     loadAd()
-                    onAdDismissed()
+                    onAdClosed(rewardEarned)
                 }
 
                 override fun ad(
@@ -65,7 +67,7 @@ actual class RewardedAdManager {
                     rewardedAd = null
                     currentDelegate = null
                     loadAd()
-                    onAdDismissed()
+                    onAdClosed(false)
                 }
 
                 override fun adWillPresentFullScreenContent(ad: GADFullScreenPresentingAdProtocol) {}
@@ -75,7 +77,7 @@ actual class RewardedAdManager {
 
             ad.fullScreenContentDelegate = currentDelegate
             ad.presentFromRootViewController(viewController) {
-                // Reward value is not used now, pause action is triggered on dismiss.
+                rewardEarned = true
             }
         }
     }

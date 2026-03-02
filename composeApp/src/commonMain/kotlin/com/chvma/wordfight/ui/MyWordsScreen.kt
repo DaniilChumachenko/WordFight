@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -31,7 +32,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -72,7 +72,7 @@ fun MyWordsScreen(
     }
 
     Scaffold(
-        containerColor = Color(0xFF1A1A2E),
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 navigationIcon = {
@@ -83,7 +83,7 @@ fun MyWordsScreen(
                 title = {
                     Text(
                         text = strings.myWords,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                     )
@@ -95,7 +95,7 @@ fun MyWordsScreen(
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A1A2E),
+                    containerColor = MaterialTheme.colorScheme.surface,
                 ),
             )
         },
@@ -112,7 +112,7 @@ fun MyWordsScreen(
             ) {
                 Text(
                     text = strings.noSavedWords,
-                    color = Color.White.copy(alpha = 0.7f),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                     fontSize = 18.sp,
                 )
             }
@@ -143,13 +143,13 @@ fun MyWordsScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = word.word,
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
                             )
                             Text(
                                 text = word.translationFor(language),
-                                color = Color.White.copy(alpha = 0.7f),
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                                 fontSize = 14.sp,
                             )
                         }
@@ -167,7 +167,7 @@ fun MyWordsScreen(
                         ) {
                             Text(
                                 text = "×",
-                                color = Color(0xFFFF5252),
+                                color = MaterialTheme.colorScheme.error,
                                 fontSize = 28.sp,
                                 fontWeight = FontWeight.Bold,
                             )
