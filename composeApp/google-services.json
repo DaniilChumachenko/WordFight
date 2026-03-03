@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "819393116532",
+    "project_id": "pronounce-word",
+    "storage_bucket": "pronounce-word.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:819393116532:android:ed9090ee31f3e6f8f79421",
+        "android_client_info": {
+          "package_name": "com.chvma.pronounceWord"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCYXrxEPFET9NAmsonVJNEF56j0Df0g9Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

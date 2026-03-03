@@ -9,8 +9,10 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.googleServices)
 }
 
+@Suppress("DEPRECATION")
 kotlin {
     cocoapods {
         summary = "Compose shared module"
@@ -22,8 +24,15 @@ kotlin {
             version = "11.10.0"
             moduleName = "GoogleMobileAds"
         }
+        pod("FirebaseFirestore") {
+            version = "11.10.0"
+        }
+        pod("FirebaseFirestoreInternal") {
+            version = "11.10.0"
+        }
     }
 
+    @Suppress("DEPRECATION")
     androidTarget {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
@@ -69,6 +78,8 @@ kotlin {
             implementation(libs.vosk.android)
             implementation("androidx.compose.material:material-icons-extended:1.6.8")
             implementation(libs.admob)
+            implementation(libs.firebase.firestore.ktx)
+            implementation(libs.kotlinx.coroutines.play.services)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
@@ -93,7 +104,7 @@ android {
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "com.chvma.wordfight"
+        applicationId = "com.chvma.pronounceWord"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
@@ -120,11 +131,10 @@ dependencies {
 }
 
 tasks.withType<PodBuildTask>().configureEach {
-    if (name.contains("Google-Mobile-Ads-SDK", ignoreCase = true)) {
-        // Work around sporadic Xcode build system crashes while creating build description for Pods.
-        xcodeBuildSettings.put("COMPILER_INDEX_STORE_ENABLE", "NO")
-        xcodeBuildSettings.put("SWIFT_ENABLE_EXPLICIT_MODULES", "NO")
-        xcodeBuildSettings.put("CLANG_ENABLE_EXPLICIT_MODULES", "NO")
-        xcodeBuildSettings.put("ONLY_ACTIVE_ARCH", "YES")
-    }
+    // Work around Xcode 26 Pod linker/debug-dylib issues for synthetic CocoaPods builds.
+    xcodeBuildSettings.put("COMPILER_INDEX_STORE_ENABLE", "NO")
+    xcodeBuildSettings.put("SWIFT_ENABLE_EXPLICIT_MODULES", "NO")
+    xcodeBuildSettings.put("CLANG_ENABLE_EXPLICIT_MODULES", "NO")
+    xcodeBuildSettings.put("ONLY_ACTIVE_ARCH", "YES")
+    xcodeBuildSettings.put("ENABLE_DEBUG_DYLIB", "NO")
 }

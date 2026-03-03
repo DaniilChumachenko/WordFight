@@ -9,6 +9,8 @@ Pod::Spec.new do |spec|
     spec.vendored_frameworks      = 'build/cocoapods/framework/composeApp.framework'
     spec.libraries                = 'c++'
     spec.ios.deployment_target    = '14.0'
+    spec.dependency 'FirebaseFirestore', '11.10.0'
+    spec.dependency 'FirebaseFirestoreInternal', '11.10.0'
     spec.dependency 'Google-Mobile-Ads-SDK', '11.10.0'
     if !Dir.exist?('build/cocoapods/framework/composeApp.framework') || Dir.empty?('build/cocoapods/framework/composeApp.framework')
         raise "
