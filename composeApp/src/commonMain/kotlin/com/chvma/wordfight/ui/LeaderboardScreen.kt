@@ -160,12 +160,24 @@ private fun LeaderboardRow(
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Text(
-            text = "${entry.rank}. ${entry.name}",
-            color = MaterialTheme.colorScheme.onSurface,
-            fontWeight = if (entry.isCurrentPlayer) FontWeight.Bold else FontWeight.SemiBold,
-            fontSize = 17.sp,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "${entry.rank}. ${entry.name}",
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = if (entry.isCurrentPlayer) FontWeight.Bold else FontWeight.SemiBold,
+                fontSize = 17.sp,
+            )
+            Text(
+                text = "${strings.scoreLabel}: ${entry.score}",
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp,
+            )
+        }
         Text(
             text = "${strings.leaderboardLanguage}: ${entry.language.nativeName}",
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),

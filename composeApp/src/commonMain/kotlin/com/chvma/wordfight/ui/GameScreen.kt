@@ -69,13 +69,16 @@ import com.chvma.wordfight.haptics.createHapticEngine
 import com.chvma.wordfight.localization.AppLanguage
 import com.chvma.wordfight.localization.AppStrings
 import com.chvma.wordfight.speech.SpeechEngine
+import com.chvma.wordfight.speech.createSpeechPlayer
 import io.github.alexzhirkevich.compottie.Compottie
 import io.github.alexzhirkevich.compottie.LottieCompositionSpec
 import io.github.alexzhirkevich.compottie.animateLottieCompositionAsState
 import io.github.alexzhirkevich.compottie.rememberLottieComposition
 import io.github.alexzhirkevich.compottie.rememberLottiePainter
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import wordfight.composeapp.generated.resources.Res
 import kotlin.math.PI
@@ -83,6 +86,12 @@ import kotlin.math.sin
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+
+private const val NIGHT_SKY_JSON_PATH = "files/moon_night_sky.json"
+private const val DAY_SKY_JSON_PATH = "files/day_sky.json"
+
+private var cachedNightSkyJson: String? = null
+private var cachedDaySkyJson: String? = null
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,6 +109,7 @@ fun GameScreen(
 ) {
     val state by gameEngine.state.collectAsState()
     val haptic = remember { createHapticEngine() }
+    val speechPlayer = remember { createSpeechPlayer() }
     val composeHaptic = LocalHapticFeedback.current
     var previousLives by remember { mutableIntStateOf(state.lives) }
     var missedWord by remember { mutableStateOf(state.lastMissedWord) }
@@ -151,6 +161,7 @@ fun GameScreen(
 
     DisposableEffect(Unit) {
         onDispose {
+            speechPlayer.stop()
             speechEngine.stop()
             gameEngine.setProcessingSlowdown(false)
             gameEngine.setSpeedScales(fall = 1f, spawn = 1f)
@@ -254,6 +265,7 @@ fun GameScreen(
         val word = state.lastMissedWord ?: return@LaunchedEffect
         missedWord = word
         showMissed = true
+        speechPlayer.speak(word.word)
         delay(2000)
         showMissed = false
     }
@@ -457,17 +469,54 @@ fun GameScreen(
 @OptIn(ExperimentalResourceApi::class)
 @Composable
 private fun AnimatedSkyBackground(modifier: Modifier = Modifier) {
-    val nightComposition by rememberLottieComposition {
-        LottieCompositionSpec.JsonString(
-            Res.readBytes("files/moon_night_sky.json").decodeToString(),
-        )
+    val isDarkTheme = isSystemInDarkTheme()
+    var nightJson by remember { mutableStateOf(cachedNightSkyJson) }
+    var dayJson by remember { mutableStateOf(cachedDaySkyJson) }
+
+    LaunchedEffect(isDarkTheme) {
+        suspend fun loadJson(path: String): String {
+            return withContext(Dispatchers.Default) {
+                Res.readBytes(path).decodeToString()
+            }
+        }
+
+        if (isDarkTheme && nightJson == null) {
+            val loaded = loadJson(NIGHT_SKY_JSON_PATH)
+            nightJson = loaded
+            cachedNightSkyJson = loaded
+        } else if (!isDarkTheme && dayJson == null) {
+            val loaded = loadJson(DAY_SKY_JSON_PATH)
+            dayJson = loaded
+            cachedDaySkyJson = loaded
+        }
+
+        if (!isDarkTheme && nightJson == null) {
+            val loaded = loadJson(NIGHT_SKY_JSON_PATH)
+            nightJson = loaded
+            cachedNightSkyJson = loaded
+        } else if (isDarkTheme && dayJson == null) {
+            val loaded = loadJson(DAY_SKY_JSON_PATH)
+            dayJson = loaded
+            cachedDaySkyJson = loaded
+        }
     }
-    val dayComposition by rememberLottieComposition {
-        LottieCompositionSpec.JsonString(
-            Res.readBytes("files/day_sky.json").decodeToString(),
+
+    val json = if (isDarkTheme) nightJson else dayJson
+    if (json == null) {
+        val fallback = if (isDarkTheme) {
+            Brush.verticalGradient(listOf(Color(0xFF0F1630), Color(0xFF1A2346), Color(0xFF26335E)))
+        } else {
+            Brush.verticalGradient(listOf(Color(0xFF9ED8FF), Color(0xFFC8EBFF), Color(0xFFEAF7FF)))
+        }
+        Box(
+            modifier = modifier.background(fallback),
         )
+        return
     }
-    val composition = if (isSystemInDarkTheme()) nightComposition else dayComposition
+
+    val composition by rememberLottieComposition {
+        LottieCompositionSpec.JsonString(json)
+    }
     val progress by animateLottieCompositionAsState(
         composition = composition,
         iterations = Compottie.IterateForever,

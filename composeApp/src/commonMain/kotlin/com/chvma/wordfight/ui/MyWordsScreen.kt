@@ -32,6 +32,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -129,14 +130,24 @@ fun MyWordsScreen(
                             .padding(vertical = 8.dp, horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Image(
-                            painter = painterResource(word.res),
-                            contentDescription = word.word,
-                            contentScale = ContentScale.Fit,
+                        Box(
                             modifier = Modifier
                                 .size(60.dp)
                                 .clickable { speechPlayer.speak(word.word) },
-                        )
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Image(
+                                painter = painterResource(word.res),
+                                contentDescription = word.word,
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                            Text(
+                                modifier = Modifier.padding(bottom = 3.dp, start = 3.dp).alpha(0.5f),
+                                text = "🔊",
+                                fontSize = 22.sp,
+                            )
+                        }
 
                         Spacer(Modifier.width(16.dp))
 
