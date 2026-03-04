@@ -5,15 +5,15 @@
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDisplayName</key>
-	<string>PronounceWord</string>
+	<string>Pronounce Word</string>
 	<key>GADApplicationIdentifier</key>
-	<string>ca-app-pub-3940256099942544~1458002511</string>
+	<string>ca-app-pub-6335318016225303~9211014566</string>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>This identifier will be used to deliver personalized ads to you.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>PronounceWord uses speech recognition to match words you say with falling cards.</string>
+	<string>Pronounce Word uses speech recognition to match words you say with falling cards.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>PronounceWord needs the microphone to hear the words you speak.</string>
+	<string>Pronounce Word needs the microphone to hear the words you speak.</string>
 	<key>SKAdNetworkItems</key>
 	<array>
 		<dict>

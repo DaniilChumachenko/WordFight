@@ -1,6 +1,6 @@
 TEAM_ID=
 
-PRODUCT_NAME=PronounceWord
+PRODUCT_NAME=Pronounce Word
 PRODUCT_BUNDLE_IDENTIFIER=com.chvma.pronounceword
 
 CURRENT_PROJECT_VERSION=1

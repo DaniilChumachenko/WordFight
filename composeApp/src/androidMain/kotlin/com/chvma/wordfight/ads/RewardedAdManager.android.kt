@@ -8,11 +8,9 @@ import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 
-actual class RewardedAdManager {
+actual class RewardedAdManager actual constructor(private val adUnitId: String) {
     private var rewardedAd: RewardedAd? = null
     private var isLoading = false
-
-    private val adUnitId = "ca-app-pub-3940256099942544/5224354917"
 
     actual fun loadAd() {
         if (isLoading || rewardedAd != null) return
@@ -74,5 +72,3 @@ actual class RewardedAdManager {
 
     actual fun isAdLoaded(): Boolean = rewardedAd != null
 }
-
-actual fun createRewardedAdManager(): RewardedAdManager = RewardedAdManager()

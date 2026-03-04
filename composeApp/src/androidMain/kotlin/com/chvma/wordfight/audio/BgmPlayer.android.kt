@@ -1,7 +1,7 @@
 package com.chvma.wordfight.audio
 
 import android.media.MediaPlayer
-import com.chvma.wordfight.R
+import com.chvma.pronounceWord.R
 import com.chvma.wordfight.speech.appContext
 
 class AndroidBgmPlayer : BgmPlayer {

@@ -12,12 +12,10 @@ import platform.darwin.dispatch_async
 import platform.darwin.dispatch_get_main_queue
 
 @OptIn(ExperimentalForeignApi::class)
-actual class RewardedAdManager {
+actual class RewardedAdManager actual constructor(private val adUnitId: String) {
     private var rewardedAd: GADRewardedAd? = null
     private var isLoading = false
     private var currentDelegate: GADFullScreenContentDelegateProtocol? = null
-
-    private val adUnitId = "ca-app-pub-3940256099942544/1712485313"
 
     actual fun loadAd() {
         dispatch_async(dispatch_get_main_queue()) {
@@ -84,5 +82,3 @@ actual class RewardedAdManager {
 
     actual fun isAdLoaded(): Boolean = rewardedAd != null
 }
-
-actual fun createRewardedAdManager(): RewardedAdManager = RewardedAdManager()

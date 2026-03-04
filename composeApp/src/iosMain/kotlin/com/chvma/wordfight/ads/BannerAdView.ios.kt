@@ -25,7 +25,7 @@ actual fun BannerAdView(modifier: Modifier) {
             .height(50.dp),
         factory = {
             val bannerView = GADBannerView(CGRectZero.readValue())
-            bannerView.adUnitID = "ca-app-pub-3940256099942544/2934735716"
+            bannerView.adUnitID = "ca-app-pub-6335318016225303/7801584186"
 
             val viewController = ViewControllerProvider.getViewController()
             if (viewController != null) {

@@ -3,7 +3,7 @@ package com.chvma.wordfight.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
-import com.chvma.wordfight.R
+import com.chvma.pronounceWord.R
 
 @Composable
 actual fun musicIconPainter(isOn: Boolean): Painter {

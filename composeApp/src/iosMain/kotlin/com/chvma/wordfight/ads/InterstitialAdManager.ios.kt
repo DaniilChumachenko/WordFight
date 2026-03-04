@@ -17,7 +17,7 @@ actual class InterstitialAdManager {
     private var isLoading = false
     private var currentDelegate: GADFullScreenContentDelegateProtocol? = null
 
-    private val adUnitId = "ca-app-pub-3940256099942544/4411468910"
+    private val adUnitId = "ca-app-pub-6335318016225303/3862339174"
 
     actual fun loadAd() {
         dispatch_async(dispatch_get_main_queue()) {

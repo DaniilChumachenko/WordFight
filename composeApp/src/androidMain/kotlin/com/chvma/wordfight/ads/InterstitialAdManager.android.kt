@@ -12,7 +12,7 @@ actual class InterstitialAdManager {
     private var interstitialAd: InterstitialAd? = null
     private var isLoading = false
 
-    private val adUnitId = "ca-app-pub-3940256099942544/1033173712"
+    private val adUnitId = "ca-app-pub-6335318016225303/7850161006"
 
     actual fun loadAd() {
         if (isLoading || interstitialAd != null) return

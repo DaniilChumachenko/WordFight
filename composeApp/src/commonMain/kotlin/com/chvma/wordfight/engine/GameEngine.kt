@@ -13,13 +13,14 @@ class GameEngine(
 ) {
     companion object {
         const val MAX_REVIVES_PER_GAME = 3
+        const val MAX_PAUSES_PER_GAME = 3
     }
 
     private val _state = MutableStateFlow(GameState())
     val state: StateFlow<GameState> = _state
 
     private var timeSinceLastSpawn = 0f
-    private var spawnInterval = 9f
+    private var spawnInterval = 6f
     private var timeSinceSpeedIncrease = 0f
     private var speedBonus = 0f
     private var cardIdCounter = 0
@@ -33,7 +34,6 @@ class GameEngine(
     private var processingSlowdown = false
 
     init {
-        // Spawn first card immediately on game start
         timeSinceLastSpawn = spawnInterval
     }
 
@@ -76,9 +76,9 @@ class GameEngine(
         // Spawn new cards
         timeSinceLastSpawn += deltaTime * spawnSpeedScale
         timeSinceSpeedIncrease += deltaTime
-        while (timeSinceSpeedIncrease >= 30f) {
+        while (timeSinceSpeedIncrease >= 20f) {
             speedBonus += 0.02f
-            timeSinceSpeedIncrease -= 30f
+            timeSinceSpeedIncrease -= 20f
         }
         val updatedCards = alive.toMutableList()
         if (timeSinceLastSpawn >= spawnInterval && !isGameOver) {
@@ -106,7 +106,7 @@ class GameEngine(
                 )
             }
         timeSinceLastSpawn = 0f
-        spawnInterval = maxOf(4.5f, 9f - current.score * 0.05f)
+        spawnInterval = maxOf(3f, 6f - current.score * 0.05f)
         }
 
         // Level progression
@@ -138,8 +138,13 @@ class GameEngine(
         if (matched != null) {
             val newScore = current.score + 1
             if (newScore > bestScore) bestScore = newScore
+            val remaining = current.activeCards - matched
+            if (remaining.isEmpty()) {
+                // Screen is empty — speed up next spawn to ~2 seconds from now
+                timeSinceLastSpawn = (spawnInterval - 2f).coerceIn(0f, spawnInterval)
+            }
             _state.value = current.copy(
-                activeCards = current.activeCards - matched,
+                activeCards = remaining,
                 score = newScore,
                 bestScore = bestScore,
             )
@@ -150,6 +155,16 @@ class GameEngine(
 
     fun pause() {
         _state.value = _state.value.copy(isPaused = true)
+    }
+
+    fun pauseWithLimit(): Boolean {
+        val current = _state.value
+        if (!canUsePause()) return false
+        _state.value = current.copy(
+            isPaused = true,
+            pausesUsed = current.pausesUsed + 1,
+        )
+        return true
     }
 
     fun resume() {
@@ -173,12 +188,17 @@ class GameEngine(
         return current.isGameOver && current.lives <= 0 && current.revivesUsed < MAX_REVIVES_PER_GAME
     }
 
+    fun canUsePause(): Boolean {
+        val current = _state.value
+        return !current.isGameOver && !current.isPaused && current.pausesUsed < MAX_PAUSES_PER_GAME
+    }
+
     fun getMissedWords(): List<WordContent> {
         return missedWords.toList()
     }
 
     fun restart() {
-        spawnInterval = 9f
+        spawnInterval = 6f
         timeSinceSpeedIncrease = 0f
         speedBonus = 0f
         // Spawn first card immediately after restart
@@ -202,9 +222,9 @@ class GameEngine(
 
     private fun levelFallScale(level: Int): Float {
         return when (level) {
-            1 -> 0.8f
-            2 -> 0.9f
-            else -> 0.96f
+            1 -> 0.9f   // 10% slower during speech
+            2 -> 0.8f   // 20% slower during speech
+            else -> 0.7f // 30% slower during speech
         }
     }
 }

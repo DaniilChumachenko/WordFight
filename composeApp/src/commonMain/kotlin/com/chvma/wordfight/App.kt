@@ -15,8 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.chvma.wordfight.ads.AdUnitIds
+import com.chvma.wordfight.ads.RewardedAdManager
 import com.chvma.wordfight.ads.createInterstitialAdManager
-import com.chvma.wordfight.ads.createRewardedAdManager
 import com.chvma.wordfight.audio.BgmTrack
 import com.chvma.wordfight.audio.createBgmPlayer
 import com.chvma.wordfight.engine.GameEngine
@@ -36,9 +37,11 @@ import com.chvma.wordfight.ui.HomeScreen
 import com.chvma.wordfight.ui.LanguageScreen
 import com.chvma.wordfight.ui.LeaderboardScreen
 import com.chvma.wordfight.ui.MyWordsScreen
+import com.chvma.wordfight.ui.AppSplashScreen
 import com.chvma.wordfight.ui.PlayerOnboardingDialog
 import com.chvma.wordfight.ui.theme.WordFightTheme
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -60,7 +63,8 @@ fun App(isSdkReady: Boolean = true) {
     val settingsStorage = remember { createSettingsStorage() }
     val leaderboardRepository = remember { createLeaderboardRepository(settingsStorage) }
     val interstitialAdManager = remember { createInterstitialAdManager() }
-    val rewardedAdManager = remember { createRewardedAdManager() }
+    val rewardedPauseAdManager = remember { RewardedAdManager(AdUnitIds.rewardedPause) }
+    val rewardedExtraLifeAdManager = remember { RewardedAdManager(AdUnitIds.rewardedExtraLife) }
     val bgmPlayer = remember { createBgmPlayer() }
     val scope = rememberCoroutineScope()
 
@@ -73,6 +77,7 @@ fun App(isSdkReady: Boolean = true) {
     var isGameMusicEnabled by remember { mutableStateOf(true) }
     var language by remember { mutableStateOf(AppLanguage.EN) }
     var myWordsTransitions by remember { mutableIntStateOf(0) }
+    var leaderboardTransitions by remember { mutableIntStateOf(0) }
     var isAppInForeground by remember { mutableStateOf(true) }
 
     var showOnboarding by remember { mutableStateOf(false) }
@@ -82,6 +87,7 @@ fun App(isSdkReady: Boolean = true) {
     var leaderboardPeriod by remember { mutableStateOf(LeaderboardPeriod.TODAY) }
     var leaderboardEntries by remember { mutableStateOf<List<LeaderboardEntry>>(emptyList()) }
     var isLeaderboardLoading by remember { mutableStateOf(false) }
+    var showAppSplash by remember { mutableStateOf(true) }
 
     val strings = remember(language) { Localization.strings(language) }
     val onboardingStrings = remember(onboardingLanguage) { Localization.strings(onboardingLanguage) }
@@ -125,6 +131,8 @@ fun App(isSdkReady: Boolean = true) {
         onboardingLanguage = startupState.language
         onboardingName = startupState.onboardingName
         showOnboarding = !startupState.onboardingCompleted || startupState.onboardingName.isBlank()
+        delay(500)
+        showAppSplash = false
     }
 
     DisposableEffect(lifecycleOwner) {
@@ -141,7 +149,11 @@ fun App(isSdkReady: Boolean = true) {
         }
     }
 
-    LaunchedEffect(currentScreen, isMenuMusicEnabled, isGameMusicEnabled, isAppInForeground) {
+    LaunchedEffect(currentScreen, isMenuMusicEnabled, isGameMusicEnabled, isAppInForeground, showAppSplash) {
+        if (showAppSplash) {
+            bgmPlayer.pause()
+            return@LaunchedEffect
+        }
         val isGame = currentScreen is Screen.Game
         val enabled = if (isGame) isGameMusicEnabled else isMenuMusicEnabled
         if (!enabled || !isAppInForeground) {
@@ -155,7 +167,8 @@ fun App(isSdkReady: Boolean = true) {
     LaunchedEffect(isSdkReady) {
         if (isSdkReady) {
             interstitialAdManager.loadAd()
-            rewardedAdManager.loadAd()
+            rewardedPauseAdManager.loadAd()
+            rewardedExtraLifeAdManager.loadAd()
         }
     }
 
@@ -175,148 +188,168 @@ fun App(isSdkReady: Boolean = true) {
         }
     }
 
+    val navigateToLeaderboard = {
+        leaderboardTransitions += 1
+        val shouldShowInterstitial = leaderboardTransitions % 5 == 0
+        val openLeaderboard = {
+            loadLeaderboard(LeaderboardPeriod.TODAY)
+            currentScreen = Screen.Leaderboard
+        }
+        if (isSdkReady && shouldShowInterstitial) {
+            interstitialAdManager.showAd {
+                openLeaderboard()
+            }
+        } else {
+            openLeaderboard()
+        }
+    }
+
     WordFightTheme {
         Box(modifier = Modifier.fillMaxSize()) {
-            when (currentScreen) {
-                is Screen.Home -> {
-                    HomeScreen(
-                        onStartGame = {
-                            currentScreen = Screen.Game
-                        },
-                        onMyWords = navigateToMyWords,
-                        onLanguages = {
-                            currentScreen = Screen.Languages
-                        },
-                        onLeaderboard = {
-                            loadLeaderboard(LeaderboardPeriod.TODAY)
-                            currentScreen = Screen.Leaderboard
-                        },
-                        hasPermission = hasPermission,
-                        onPermissionGranted = {
-                            scope.launch {
-                                val granted = withContext(Dispatchers.Default) {
-                                    permissionManager.hasPermission()
+            if (showAppSplash) {
+                AppSplashScreen(
+                    title = strings.appTitle,
+                    loadingText = strings.leaderboardLoading,
+                )
+            } else {
+                when (currentScreen) {
+                    is Screen.Home -> {
+                        HomeScreen(
+                            onStartGame = {
+                                currentScreen = Screen.Game
+                            },
+                            onMyWords = navigateToMyWords,
+                            onLanguages = {
+                                currentScreen = Screen.Languages
+                            },
+                            onLeaderboard = navigateToLeaderboard,
+                            hasPermission = hasPermission,
+                            onPermissionGranted = {
+                                scope.launch {
+                                    val granted = withContext(Dispatchers.Default) {
+                                        permissionManager.hasPermission()
+                                    }
+                                    hasPermission = granted
                                 }
-                                hasPermission = granted
-                            }
-                        },
-                        musicEnabled = isMenuMusicEnabled,
-                        onToggleMusic = { isMenuMusicEnabled = !isMenuMusicEnabled },
-                        strings = strings,
-                    )
-                }
+                            },
+                            musicEnabled = isMenuMusicEnabled,
+                            onToggleMusic = { isMenuMusicEnabled = !isMenuMusicEnabled },
+                            strings = strings,
+                        )
+                    }
 
-                is Screen.Game -> {
-                    GameScreen(
-                        gameEngine = gameEngine,
-                        speechEngine = speechEngine,
-                        onGameOver = { score, best ->
-                            lastScore = score
-                            val updatedBest = maxOf(bestScore, best, score)
-                            bestScore = updatedBest
-                            missedWords = gameEngine.getMissedWords()
+                    is Screen.Game -> {
+                        GameScreen(
+                            gameEngine = gameEngine,
+                            speechEngine = speechEngine,
+                            onGameOver = { score, best ->
+                                lastScore = score
+                                val updatedBest = maxOf(bestScore, best, score)
+                                bestScore = updatedBest
+                                missedWords = gameEngine.getMissedWords()
 
-                            scope.launch(Dispatchers.Default) {
-                                wordStorage.saveBestScore(updatedBest)
-                                leaderboardRepository.submitGameScore(score)
-                            }
-
-                            currentScreen = Screen.GameOver
-                        },
-                        onBack = {
-                            gameEngine.restart()
-                            currentScreen = Screen.Home
-                        },
-                        musicEnabled = isGameMusicEnabled,
-                        onToggleMusic = { isGameMusicEnabled = !isGameMusicEnabled },
-                        language = language,
-                        strings = strings,
-                        onPauseWithAd = { onPaused ->
-                            if (isSdkReady) {
-                                rewardedAdManager.showAd { _ ->
-                                    onPaused()
+                                scope.launch(Dispatchers.Default) {
+                                    wordStorage.saveBestScore(updatedBest)
+                                    leaderboardRepository.submitGameScore(score)
                                 }
-                            } else {
-                                onPaused()
-                            }
-                        },
-                        onReviveWithAd = { onResult ->
-                            if (isSdkReady) {
-                                rewardedAdManager.showAd { rewarded ->
-                                    onResult(rewarded)
+
+                                currentScreen = Screen.GameOver
+                            },
+                            onBack = {
+                                gameEngine.restart()
+                                currentScreen = Screen.Home
+                            },
+                            musicEnabled = isGameMusicEnabled,
+                            onToggleMusic = { isGameMusicEnabled = !isGameMusicEnabled },
+                            language = language,
+                            strings = strings,
+                            onPauseWithAd = { onResult ->
+                                if (isSdkReady) {
+                                    rewardedPauseAdManager.showAd { rewarded ->
+                                        onResult(rewarded)
+                                    }
+                                } else {
+                                    onResult(true)
                                 }
-                            } else {
-                                onResult(false)
-                            }
-                        },
-                    )
-                }
+                            },
+                            onReviveWithAd = { onResult ->
+                                if (isSdkReady) {
+                                    rewardedExtraLifeAdManager.showAd { rewarded ->
+                                        onResult(rewarded)
+                                    }
+                                } else {
+                                    onResult(false)
+                                }
+                            },
+                        )
+                    }
 
-                is Screen.GameOver -> {
-                    GameOverScreen(
-                        score = lastScore,
-                        bestScore = bestScore,
-                        missedWords = missedWords,
-                        onRestart = {
-                            gameEngine.restart()
-                            currentScreen = Screen.Game
-                        },
-                        onHome = {
-                            gameEngine.restart()
-                            currentScreen = Screen.Home
-                        },
-                        musicEnabled = isMenuMusicEnabled,
-                        onToggleMusic = { isMenuMusicEnabled = !isMenuMusicEnabled },
-                        language = language,
-                        strings = strings,
-                    )
-                }
+                    is Screen.GameOver -> {
+                        GameOverScreen(
+                            score = lastScore,
+                            bestScore = bestScore,
+                            missedWords = missedWords,
+                            onRestart = {
+                                gameEngine.restart()
+                                currentScreen = Screen.Game
+                            },
+                            onHome = {
+                                gameEngine.restart()
+                                currentScreen = Screen.Home
+                            },
+                            musicEnabled = isMenuMusicEnabled,
+                            onToggleMusic = { isMenuMusicEnabled = !isMenuMusicEnabled },
+                            language = language,
+                            strings = strings,
+                        )
+                    }
 
-                is Screen.MyWords -> {
-                    MyWordsScreen(
-                        onBack = {
-                            currentScreen = Screen.Home
-                        },
-                        musicEnabled = isMenuMusicEnabled,
-                        onToggleMusic = { isMenuMusicEnabled = !isMenuMusicEnabled },
-                        language = language,
-                        strings = strings,
-                    )
-                }
+                    is Screen.MyWords -> {
+                        MyWordsScreen(
+                            onBack = {
+                                currentScreen = Screen.Home
+                            },
+                            musicEnabled = isMenuMusicEnabled,
+                            onToggleMusic = { isMenuMusicEnabled = !isMenuMusicEnabled },
+                            language = language,
+                            strings = strings,
+                        )
+                    }
 
-                is Screen.Languages -> {
-                    LanguageScreen(
-                        current = language,
-                        onSelect = { selected ->
-                            language = selected
-                            scope.launch(Dispatchers.Default) {
-                                settingsStorage.setLanguage(selected)
-                            }
-                        },
-                        onBack = {
-                            currentScreen = Screen.Home
-                        },
-                        musicEnabled = isMenuMusicEnabled,
-                        onToggleMusic = { isMenuMusicEnabled = !isMenuMusicEnabled },
-                        strings = strings,
-                    )
-                }
+                    is Screen.Languages -> {
+                        LanguageScreen(
+                            current = language,
+                            onSelect = { selected ->
+                                language = selected
+                                scope.launch(Dispatchers.Default) {
+                                    settingsStorage.setLanguage(selected)
+                                }
+                            },
+                            onBack = {
+                                currentScreen = Screen.Home
+                            },
+                            musicEnabled = isMenuMusicEnabled,
+                            onToggleMusic = { isMenuMusicEnabled = !isMenuMusicEnabled },
+                            strings = strings,
+                        )
+                    }
 
-                is Screen.Leaderboard -> {
-                    LeaderboardScreen(
-                        selectedPeriod = leaderboardPeriod,
-                        entries = leaderboardEntries,
-                        loading = isLeaderboardLoading,
-                        onSelectPeriod = { period ->
-                            loadLeaderboard(period)
-                        },
-                        onBack = {
-                            currentScreen = Screen.Home
-                        },
-                        musicEnabled = isMenuMusicEnabled,
-                        onToggleMusic = { isMenuMusicEnabled = !isMenuMusicEnabled },
-                        strings = strings,
-                    )
+                    is Screen.Leaderboard -> {
+                        LeaderboardScreen(
+                            selectedPeriod = leaderboardPeriod,
+                            entries = leaderboardEntries,
+                            loading = isLeaderboardLoading,
+                            onSelectPeriod = { period ->
+                                loadLeaderboard(period)
+                            },
+                            onBack = {
+                                currentScreen = Screen.Home
+                            },
+                            musicEnabled = isMenuMusicEnabled,
+                            onToggleMusic = { isMenuMusicEnabled = !isMenuMusicEnabled },
+                            strings = strings,
+                        )
+                    }
                 }
             }
 

@@ -100,8 +100,17 @@ kotlin {
 }
 
 android {
-    namespace = "com.chvma.wordfight"
+    namespace = "com.chvma.pronounceWord"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
+
+    signingConfigs {
+        create("release") {
+            storeFile = file("release-keystore.jks")
+            storePassword = "***REMOVED***"
+            keyAlias = "pronounceword"
+            keyPassword = "***REMOVED***"
+        }
+    }
 
     defaultConfig {
         applicationId = "com.chvma.pronounceWord"
@@ -117,7 +126,13 @@ android {
     }
     buildTypes {
         getByName("release") {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {

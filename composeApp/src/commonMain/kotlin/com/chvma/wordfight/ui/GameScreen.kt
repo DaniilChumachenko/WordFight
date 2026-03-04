@@ -104,7 +104,7 @@ fun GameScreen(
     onToggleMusic: () -> Unit,
     language: AppLanguage,
     strings: AppStrings,
-    onPauseWithAd: (onPaused: () -> Unit) -> Unit,
+    onPauseWithAd: (onResult: (rewarded: Boolean) -> Unit) -> Unit,
     onReviveWithAd: (onResult: (rewarded: Boolean) -> Unit) -> Unit,
 ) {
     val state by gameEngine.state.collectAsState()
@@ -303,9 +303,12 @@ fun GameScreen(
                             .clickable {
                                 if (state.isPaused) {
                                     gameEngine.resume()
-                                } else {
-                                    gameEngine.pause()
-                                    onPauseWithAd { }
+                                } else if (gameEngine.canUsePause()) {
+                                    onPauseWithAd { rewarded ->
+                                        if (rewarded) {
+                                            gameEngine.pauseWithLimit()
+                                        }
+                                    }
                                 }
                             },
                         text = if (state.isPaused) "▶" else "⏸",

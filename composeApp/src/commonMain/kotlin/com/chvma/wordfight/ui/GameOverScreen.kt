@@ -193,7 +193,7 @@ fun GameOverScreen(
                     textAlign = TextAlign.Center,
                 )
 
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(14.dp))
 
                 Text(
                     text = "${strings.scoreLabel}: $score",
@@ -203,7 +203,7 @@ fun GameOverScreen(
                     textAlign = TextAlign.Center,
                 )
 
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(6.dp))
 
                 Text(
                     text = "${strings.bestLabel}: $bestScore",
@@ -213,7 +213,7 @@ fun GameOverScreen(
                 )
 
                 if (missedWords.isNotEmpty()) {
-                    Spacer(Modifier.height(24.dp))
+                    Spacer(Modifier.height(14.dp))
 
                     Text(
                         text = "${strings.missedWords}:",
@@ -223,10 +223,10 @@ fun GameOverScreen(
                         textAlign = TextAlign.Center,
                     )
 
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(6.dp))
 
                     LazyColumn(
-                        modifier = Modifier.heightIn(max = 200.dp),
+                        modifier = Modifier.heightIn(max = 300.dp),
                     ) {
                         items(missedWords) { word ->
                             WordItem(
@@ -247,7 +247,7 @@ fun GameOverScreen(
                     }
                 }
 
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(14.dp))
 
                 Row(
                     horizontalArrangement = Arrangement.Center,
