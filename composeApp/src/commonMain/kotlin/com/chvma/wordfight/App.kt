@@ -6,377 +6,200 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.chvma.wordfight.ads.AdUnitIds
-import com.chvma.wordfight.ads.RewardedAdManager
-import com.chvma.wordfight.ads.createInterstitialAdManager
-import com.chvma.wordfight.audio.BgmTrack
-import com.chvma.wordfight.audio.createBgmPlayer
-import com.chvma.wordfight.engine.GameEngine
-import com.chvma.wordfight.leaderboard.LeaderboardEntry
-import com.chvma.wordfight.leaderboard.LeaderboardPeriod
-import com.chvma.wordfight.leaderboard.createLeaderboardRepository
-import com.chvma.wordfight.localization.AppLanguage
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
 import com.chvma.wordfight.localization.Localization
-import com.chvma.wordfight.model.WordContent
-import com.chvma.wordfight.speech.createPermissionManager
-import com.chvma.wordfight.speech.createSpeechEngine
-import com.chvma.wordfight.storage.createSettingsStorage
-import com.chvma.wordfight.storage.createWordStorage
+import com.chvma.wordfight.ui.AppSplashScreen
 import com.chvma.wordfight.ui.GameOverScreen
 import com.chvma.wordfight.ui.GameScreen
 import com.chvma.wordfight.ui.HomeScreen
 import com.chvma.wordfight.ui.LanguageScreen
 import com.chvma.wordfight.ui.LeaderboardScreen
 import com.chvma.wordfight.ui.MyWordsScreen
-import com.chvma.wordfight.ui.AppSplashScreen
-import com.chvma.wordfight.ui.PlayerOnboardingDialog
+import com.chvma.wordfight.ui.PlayerOnboardingScreen
 import com.chvma.wordfight.ui.theme.WordFightTheme
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 
-sealed class Screen {
-    object Home : Screen()
-    object Game : Screen()
-    object GameOver : Screen()
-    object MyWords : Screen()
-    object Languages : Screen()
-    object Leaderboard : Screen()
+private object Routes {
+    const val HOME = "home"
+    const val GAME = "game"
+    const val GAME_OVER = "gameOver"
+    const val MY_WORDS = "myWords"
+    const val LANGUAGES = "languages"
+    const val LEADERBOARD = "leaderboard"
+    const val ONBOARDING = "onboarding"
 }
 
 @Composable
 fun App(isSdkReady: Boolean = true) {
-    val gameEngine = remember { GameEngine() }
-    val speechEngine = remember { createSpeechEngine() }
-    val permissionManager = remember { createPermissionManager() }
-    val wordStorage = remember { createWordStorage() }
-    val settingsStorage = remember { createSettingsStorage() }
-    val leaderboardRepository = remember { createLeaderboardRepository(settingsStorage) }
-    val interstitialAdManager = remember { createInterstitialAdManager() }
-    val rewardedPauseAdManager = remember { RewardedAdManager(AdUnitIds.rewardedPause) }
-    val rewardedExtraLifeAdManager = remember { RewardedAdManager(AdUnitIds.rewardedExtraLife) }
-    val bgmPlayer = remember { createBgmPlayer() }
-    val scope = rememberCoroutineScope()
+    val viewModel: AppViewModel = viewModel { AppViewModel() }
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val navController = rememberNavController()
+    val strings = remember(uiState.language) { Localization.strings(uiState.language) }
 
-    var currentScreen by remember { mutableStateOf<Screen>(Screen.Home) }
-    var lastScore by remember { mutableIntStateOf(0) }
-    var bestScore by remember { mutableIntStateOf(0) }
-    var missedWords by remember { mutableStateOf<List<WordContent>>(emptyList()) }
-    var hasPermission by remember { mutableStateOf(false) }
-    var isMenuMusicEnabled by remember { mutableStateOf(true) }
-    var isGameMusicEnabled by remember { mutableStateOf(true) }
-    var language by remember { mutableStateOf(AppLanguage.EN) }
-    var myWordsTransitions by remember { mutableIntStateOf(0) }
-    var leaderboardTransitions by remember { mutableIntStateOf(0) }
-    var isAppInForeground by remember { mutableStateOf(true) }
-
-    var showOnboarding by remember { mutableStateOf(false) }
-    var onboardingName by remember { mutableStateOf("") }
-    var onboardingLanguage by remember { mutableStateOf(AppLanguage.EN) }
-
-    var leaderboardPeriod by remember { mutableStateOf(LeaderboardPeriod.TODAY) }
-    var leaderboardEntries by remember { mutableStateOf<List<LeaderboardEntry>>(emptyList()) }
-    var isLeaderboardLoading by remember { mutableStateOf(false) }
-    var showAppSplash by remember { mutableStateOf(true) }
-
-    val strings = remember(language) { Localization.strings(language) }
-    val onboardingStrings = remember(onboardingLanguage) { Localization.strings(onboardingLanguage) }
     val lifecycleOwner = LocalLifecycleOwner.current
+    var isForeground by remember { mutableStateOf(true) }
 
-    fun loadLeaderboard(period: LeaderboardPeriod) {
-        leaderboardPeriod = period
-        scope.launch {
-            isLeaderboardLoading = true
-            leaderboardEntries = withContext(Dispatchers.Default) {
-                leaderboardRepository.getLeaderboardWindow(period)
-            }
-            isLeaderboardLoading = false
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        data class StartupState(
-            val bestScore: Int,
-            val hasPermission: Boolean,
-            val language: AppLanguage,
-            val onboardingCompleted: Boolean,
-            val onboardingName: String,
-        )
-
-        val startupState = withContext(Dispatchers.Default) {
-            val loadedBestScore = wordStorage.getBestScore()
-            leaderboardRepository.syncAllTimeBaseline(loadedBestScore)
-            StartupState(
-                bestScore = loadedBestScore,
-                hasPermission = permissionManager.hasPermission(),
-                language = settingsStorage.getLanguage(),
-                onboardingCompleted = settingsStorage.isOnboardingCompleted(),
-                onboardingName = settingsStorage.getPlayerName().orEmpty(),
-            )
-        }
-
-        bestScore = startupState.bestScore
-        hasPermission = startupState.hasPermission
-        language = startupState.language
-        onboardingLanguage = startupState.language
-        onboardingName = startupState.onboardingName
-        showOnboarding = !startupState.onboardingCompleted || startupState.onboardingName.isBlank()
-        delay(500)
-        showAppSplash = false
-    }
+    LaunchedEffect(Unit) { viewModel.onStart() }
+    LaunchedEffect(isSdkReady) { viewModel.setSdkReady(isSdkReady) }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_START -> isAppInForeground = true
-                Lifecycle.Event.ON_STOP -> isAppInForeground = false
+                Lifecycle.Event.ON_START -> isForeground = true
+                Lifecycle.Event.ON_STOP -> isForeground = false
                 else -> Unit
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    LaunchedEffect(currentScreen, isMenuMusicEnabled, isGameMusicEnabled, isAppInForeground, showAppSplash) {
-        if (showAppSplash) {
-            bgmPlayer.pause()
-            return@LaunchedEffect
-        }
-        val isGame = currentScreen is Screen.Game
-        val enabled = if (isGame) isGameMusicEnabled else isMenuMusicEnabled
-        if (!enabled || !isAppInForeground) {
-            bgmPlayer.pause()
-            return@LaunchedEffect
-        }
-        val track = if (isGame) BgmTrack.Game else BgmTrack.Menu
-        bgmPlayer.startLoop(track)
-    }
-
-    LaunchedEffect(isSdkReady) {
-        if (isSdkReady) {
-            interstitialAdManager.loadAd()
-            rewardedPauseAdManager.loadAd()
-            rewardedExtraLifeAdManager.loadAd()
-        }
-    }
-
-    DisposableEffect(Unit) {
-        onDispose { bgmPlayer.stop() }
-    }
-
-    val navigateToMyWords = {
-        myWordsTransitions += 1
-        val shouldShowInterstitial = myWordsTransitions % 5 == 0
-        if (isSdkReady && shouldShowInterstitial) {
-            interstitialAdManager.showAd {
-                currentScreen = Screen.MyWords
-            }
-        } else {
-            currentScreen = Screen.MyWords
-        }
-    }
-
-    val navigateToLeaderboard = {
-        leaderboardTransitions += 1
-        val shouldShowInterstitial = leaderboardTransitions % 5 == 0
-        val openLeaderboard = {
-            loadLeaderboard(LeaderboardPeriod.TODAY)
-            currentScreen = Screen.Leaderboard
-        }
-        if (isSdkReady && shouldShowInterstitial) {
-            interstitialAdManager.showAd {
-                openLeaderboard()
-            }
-        } else {
-            openLeaderboard()
-        }
+    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+    LaunchedEffect(
+        currentRoute,
+        uiState.isMenuMusicEnabled,
+        uiState.isGameMusicEnabled,
+        isForeground,
+        uiState.isSplashVisible,
+    ) {
+        viewModel.updateBgm(isGameScreen = currentRoute == Routes.GAME, isForeground = isForeground)
     }
 
     WordFightTheme {
         Box(modifier = Modifier.fillMaxSize()) {
-            if (showAppSplash) {
+            if (uiState.isSplashVisible) {
                 AppSplashScreen(
                     title = strings.appTitle,
                     loadingText = strings.leaderboardLoading,
                 )
             } else {
-                when (currentScreen) {
-                    is Screen.Home -> {
+                NavHost(navController = navController, startDestination = Routes.HOME) {
+                    composable(Routes.HOME) {
                         HomeScreen(
-                            onStartGame = {
-                                currentScreen = Screen.Game
+                            bestScore = uiState.bestScore,
+                            onStartGame = { navController.navigate(Routes.GAME) },
+                            onMyWords = { viewModel.openMyWords { navController.navigate(Routes.MY_WORDS) } },
+                            onLanguages = { navController.navigate(Routes.LANGUAGES) },
+                            onLeaderboard = {
+                                viewModel.openLeaderboard(
+                                    onOnboarding = { navController.navigate(Routes.ONBOARDING) },
+                                    onLeaderboard = { navController.navigate(Routes.LEADERBOARD) },
+                                )
                             },
-                            onMyWords = navigateToMyWords,
-                            onLanguages = {
-                                currentScreen = Screen.Languages
-                            },
-                            onLeaderboard = navigateToLeaderboard,
-                            hasPermission = hasPermission,
-                            onPermissionGranted = {
-                                scope.launch {
-                                    val granted = withContext(Dispatchers.Default) {
-                                        permissionManager.hasPermission()
-                                    }
-                                    hasPermission = granted
-                                }
-                            },
-                            musicEnabled = isMenuMusicEnabled,
-                            onToggleMusic = { isMenuMusicEnabled = !isMenuMusicEnabled },
+                            hasPermission = uiState.hasPermission,
+                            onPermissionGranted = { viewModel.refreshPermission() },
+                            musicEnabled = uiState.isMenuMusicEnabled,
+                            onToggleMusic = { viewModel.toggleMenuMusic() },
                             strings = strings,
                         )
                     }
 
-                    is Screen.Game -> {
+                    composable(Routes.GAME) {
                         GameScreen(
-                            gameEngine = gameEngine,
-                            speechEngine = speechEngine,
+                            gameEngine = viewModel.gameEngine,
+                            speechEngine = viewModel.speechEngine,
                             onGameOver = { score, best ->
-                                lastScore = score
-                                val updatedBest = maxOf(bestScore, best, score)
-                                bestScore = updatedBest
-                                missedWords = gameEngine.getMissedWords()
-
-                                scope.launch(Dispatchers.Default) {
-                                    wordStorage.saveBestScore(updatedBest)
-                                    leaderboardRepository.submitGameScore(score)
+                                viewModel.onGameOver(score, best)
+                                navController.navigate(Routes.GAME_OVER) {
+                                    popUpTo(Routes.GAME) { inclusive = true }
                                 }
-
-                                currentScreen = Screen.GameOver
                             },
                             onBack = {
-                                gameEngine.restart()
-                                currentScreen = Screen.Home
+                                viewModel.restartGame()
+                                navController.popBackStack()
                             },
-                            musicEnabled = isGameMusicEnabled,
-                            onToggleMusic = { isGameMusicEnabled = !isGameMusicEnabled },
-                            language = language,
+                            musicEnabled = uiState.isGameMusicEnabled,
+                            onToggleMusic = { viewModel.toggleGameMusic() },
+                            language = uiState.language,
                             strings = strings,
-                            onPauseWithAd = { onResult ->
-                                if (isSdkReady) {
-                                    rewardedPauseAdManager.showAd { rewarded ->
-                                        onResult(rewarded)
-                                    }
-                                } else {
-                                    onResult(true)
-                                }
-                            },
-                            onReviveWithAd = { onResult ->
-                                if (isSdkReady) {
-                                    rewardedExtraLifeAdManager.showAd { rewarded ->
-                                        onResult(rewarded)
-                                    }
-                                } else {
-                                    onResult(false)
-                                }
-                            },
+                            onPauseWithAd = { onResult -> viewModel.showPauseAd(onResult) },
+                            onReviveWithAd = { onResult -> viewModel.showReviveAd(onResult) },
                         )
                     }
 
-                    is Screen.GameOver -> {
+                    composable(Routes.GAME_OVER) {
                         GameOverScreen(
-                            score = lastScore,
-                            bestScore = bestScore,
-                            missedWords = missedWords,
+                            score = uiState.lastScore,
+                            bestScore = uiState.bestScore,
+                            missedWords = uiState.missedWords,
                             onRestart = {
-                                gameEngine.restart()
-                                currentScreen = Screen.Game
+                                viewModel.restartGame()
+                                navController.navigate(Routes.GAME) {
+                                    popUpTo(Routes.GAME_OVER) { inclusive = true }
+                                }
                             },
                             onHome = {
-                                gameEngine.restart()
-                                currentScreen = Screen.Home
+                                viewModel.restartGame()
+                                navController.popBackStack(Routes.HOME, inclusive = false)
                             },
-                            musicEnabled = isMenuMusicEnabled,
-                            onToggleMusic = { isMenuMusicEnabled = !isMenuMusicEnabled },
-                            language = language,
+                            musicEnabled = uiState.isMenuMusicEnabled,
+                            onToggleMusic = { viewModel.toggleMenuMusic() },
+                            language = uiState.language,
                             strings = strings,
                         )
                     }
 
-                    is Screen.MyWords -> {
+                    composable(Routes.MY_WORDS) {
                         MyWordsScreen(
-                            onBack = {
-                                currentScreen = Screen.Home
-                            },
-                            musicEnabled = isMenuMusicEnabled,
-                            onToggleMusic = { isMenuMusicEnabled = !isMenuMusicEnabled },
-                            language = language,
+                            onBack = { navController.popBackStack() },
+                            musicEnabled = uiState.isMenuMusicEnabled,
+                            onToggleMusic = { viewModel.toggleMenuMusic() },
+                            language = uiState.language,
                             strings = strings,
                         )
                     }
 
-                    is Screen.Languages -> {
+                    composable(Routes.LANGUAGES) {
                         LanguageScreen(
-                            current = language,
-                            onSelect = { selected ->
-                                language = selected
-                                scope.launch(Dispatchers.Default) {
-                                    settingsStorage.setLanguage(selected)
+                            current = uiState.language,
+                            onSelect = { viewModel.setLanguage(it) },
+                            onBack = { navController.popBackStack() },
+                            musicEnabled = uiState.isMenuMusicEnabled,
+                            onToggleMusic = { viewModel.toggleMenuMusic() },
+                            strings = strings,
+                        )
+                    }
+
+                    composable(Routes.ONBOARDING) {
+                        PlayerOnboardingScreen(
+                            initialLanguage = uiState.language,
+                            onConfirm = { name, selectedLanguage ->
+                                viewModel.confirmOnboarding(name, selectedLanguage) {
+                                    navController.navigate(Routes.LEADERBOARD) {
+                                        popUpTo(Routes.ONBOARDING) { inclusive = true }
+                                    }
                                 }
                             },
-                            onBack = {
-                                currentScreen = Screen.Home
-                            },
-                            musicEnabled = isMenuMusicEnabled,
-                            onToggleMusic = { isMenuMusicEnabled = !isMenuMusicEnabled },
-                            strings = strings,
+                            onBack = { navController.popBackStack() },
+                            musicEnabled = uiState.isMenuMusicEnabled,
+                            onToggleMusic = { viewModel.toggleMenuMusic() },
                         )
                     }
 
-                    is Screen.Leaderboard -> {
+                    composable(Routes.LEADERBOARD) {
                         LeaderboardScreen(
-                            selectedPeriod = leaderboardPeriod,
-                            entries = leaderboardEntries,
-                            loading = isLeaderboardLoading,
-                            onSelectPeriod = { period ->
-                                loadLeaderboard(period)
-                            },
-                            onBack = {
-                                currentScreen = Screen.Home
-                            },
-                            musicEnabled = isMenuMusicEnabled,
-                            onToggleMusic = { isMenuMusicEnabled = !isMenuMusicEnabled },
+                            selectedPeriod = uiState.leaderboard.period,
+                            entries = uiState.leaderboard.entries,
+                            loading = uiState.leaderboard.isLoading,
+                            onSelectPeriod = { viewModel.loadLeaderboard(it) },
+                            onBack = { navController.popBackStack() },
+                            musicEnabled = uiState.isMenuMusicEnabled,
+                            onToggleMusic = { viewModel.toggleMenuMusic() },
                             strings = strings,
                         )
                     }
                 }
-            }
-
-            if (showOnboarding) {
-                PlayerOnboardingDialog(
-                    name = onboardingName,
-                    selectedLanguage = onboardingLanguage,
-                    onNameChange = { onboardingName = it },
-                    onLanguageSelect = { selected -> onboardingLanguage = selected },
-                    onConfirm = {
-                        val finalName = onboardingName.trim()
-                        if (finalName.isEmpty()) return@PlayerOnboardingDialog
-                        val selectedLanguage = onboardingLanguage
-
-                        scope.launch {
-                            withContext(Dispatchers.Default) {
-                                settingsStorage.ensurePlayerId()
-                                settingsStorage.setPlayerName(finalName)
-                                settingsStorage.setLanguage(selectedLanguage)
-                                settingsStorage.setOnboardingCompleted(true)
-                            }
-                            language = selectedLanguage
-                            showOnboarding = false
-                        }
-                    },
-                    strings = onboardingStrings,
-                )
             }
         }
     }

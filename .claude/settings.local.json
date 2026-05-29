@@ -2,7 +2,16 @@
   "permissions": {
     "allow": [
       "Bash(echo:*)",
-      "Bash(where:*)"
+      "Bash(where:*)",
+      "Bash(cd /d D:\\\\WORK\\\\my\\\\WordFight)",
+      "Bash(dir /b)",
+      "Bash(dir /b /s composeApp\\\\src)",
+      "Bash(findstr /v /i \"\\\\.git\")",
+      "Bash(./gradlew :composeApp:compileDebugKotlinAndroid -q)",
+      "WebFetch(domain:maven.pkg.jetbrains.space)",
+      "WebFetch(domain:repo1.maven.org)",
+      "Bash(./gradlew :composeApp:compileDebugKotlinAndroid)",
+      "Bash(./gradlew :composeApp:compileCommonMainKotlinMetadata)"
     ]
   }
 }

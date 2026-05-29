@@ -22,11 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
@@ -38,13 +34,11 @@ import androidx.compose.ui.unit.sp
 import com.chvma.wordfight.ads.BannerAdView
 import com.chvma.wordfight.localization.AppStrings
 import com.chvma.wordfight.speech.rememberPermissionRequester
-import com.chvma.wordfight.storage.createWordStorage
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
+    bestScore: Int,
     onStartGame: () -> Unit,
     onMyWords: () -> Unit,
     onLanguages: () -> Unit,
@@ -55,19 +49,10 @@ fun HomeScreen(
     onToggleMusic: () -> Unit,
     strings: AppStrings,
 ) {
-    val wordStorage = remember { createWordStorage() }
-    var bestScore by remember { mutableStateOf(0) }
-
     val permissionRequester = rememberPermissionRequester { granted ->
         if (granted) {
             onPermissionGranted()
             onStartGame()
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        bestScore = withContext(Dispatchers.Default) {
-            wordStorage.getBestScore()
         }
     }
 

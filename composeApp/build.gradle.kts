@@ -91,6 +91,7 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
+            implementation(libs.androidx.navigation.compose)
             implementation(libs.kotlinx.coroutines.core)
             implementation("io.github.alexzhirkevich:compottie:2.0.2")
         }
@@ -117,8 +118,8 @@ android {
         applicationId = "com.chvma.pronounceWord"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 3
+        versionName = "1.0.2"
     }
     packaging {
         resources {

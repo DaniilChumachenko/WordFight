@@ -17,29 +17,52 @@ class LeaderboardRepository(
 
     suspend fun submitGameScore(score: Int) {
         if (score <= 0) return
-        val profile = getOrCreateProfile()
         val dayKey = normalizeDailyScoreForUtcDay()
-
-        val currentAllTime = settingsStorage.getBestAllTimeScore()
-        val allTimeBest = maxOf(score, currentAllTime)
-        if (allTimeBest > currentAllTime) {
-            settingsStorage.setBestAllTimeScore(allTimeBest)
+        updateLocalBests(score)
+        // Push to the remote leaderboard only once the player has a name.
+        // Anonymous games are kept locally and uploaded after registration.
+        if (isRegistered()) {
+            pushBestsToRemote(dayKey)
         }
+    }
+
+    /**
+     * Uploads the locally stored best scores to the remote leaderboard.
+     * Called right after the player enters their name so that achievements
+     * earned before registration immediately appear in the rating.
+     */
+    suspend fun submitBestScores() {
+        if (!isRegistered()) return
+        val dayKey = normalizeDailyScoreForUtcDay()
+        pushBestsToRemote(dayKey)
+    }
+
+    private suspend fun isRegistered(): Boolean {
+        return settingsStorage.getPlayerName() != null
+    }
+
+    private suspend fun updateLocalBests(score: Int) {
+        val currentAllTime = settingsStorage.getBestAllTimeScore()
+        if (score > currentAllTime) {
+            settingsStorage.setBestAllTimeScore(score)
+        }
+        val currentDaily = settingsStorage.getBestDailyScore()
+        if (score > currentDaily) {
+            settingsStorage.setBestDailyScore(score)
+        }
+    }
+
+    private suspend fun pushBestsToRemote(dayKey: Long) {
+        val profile = getOrCreateProfile()
         remoteDataSource.upsertBestScore(
             period = LeaderboardPeriod.ALL_TIME,
             dayKey = null,
-            record = profile.toRemote(allTimeBest),
+            record = profile.toRemote(settingsStorage.getBestAllTimeScore()),
         )
-
-        val currentDaily = settingsStorage.getBestDailyScore()
-        val dailyBest = maxOf(score, currentDaily)
-        if (dailyBest > currentDaily) {
-            settingsStorage.setBestDailyScore(dailyBest)
-        }
         remoteDataSource.upsertBestScore(
             period = LeaderboardPeriod.TODAY,
             dayKey = dayKey,
-            record = profile.toRemote(dailyBest),
+            record = profile.toRemote(settingsStorage.getBestDailyScore()),
         )
     }
 
