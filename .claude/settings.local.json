@@ -11,7 +11,11 @@
       "WebFetch(domain:maven.pkg.jetbrains.space)",
       "WebFetch(domain:repo1.maven.org)",
       "Bash(./gradlew :composeApp:compileDebugKotlinAndroid)",
-      "Bash(./gradlew :composeApp:compileCommonMainKotlinMetadata)"
+      "Bash(./gradlew :composeApp:compileCommonMainKotlinMetadata)",
+      "Bash(./gradlew :composeApp:generateResourceAccessorsForCommonMain -q)",
+      "Read(//tmp/**)",
+      "Bash(grep -nE \"^import wordfight.composeapp.generated.resources\\\\.\\(Res|zebra_3d\\)$\" composeApp/src/commonMain/kotlin/com/chvma/wordfight/content/WordRepository.kt)",
+      "mcp__ide__getDiagnostics"
     ]
   }
 }

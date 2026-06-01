@@ -84,7 +84,7 @@ object Localization {
             )
             AppLanguage.RU -> AppStrings(
                 appTitle = "Произнеси слово!",
-                bestLabel = "Лучший",
+                bestLabel = "Ваш лучший результат",
                 scoreLabel = "Счет",
                 tapToStart = "Нажми, чтобы начать!",
                 myWords = "Мои слова",

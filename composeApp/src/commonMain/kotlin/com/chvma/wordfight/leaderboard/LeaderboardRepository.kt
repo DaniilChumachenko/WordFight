@@ -106,11 +106,20 @@ class LeaderboardRepository(
             )
         }
 
-        val selfIndex = ranked.indexOfFirst { it.isCurrentPlayer }.let { if (it < 0) 0 else it }
-        val start = (selfIndex - WINDOW_RADIUS).coerceAtLeast(0)
-        val end = (selfIndex + WINDOW_RADIUS).coerceAtMost(ranked.lastIndex)
+        if (ranked.isEmpty()) return emptyList()
 
-        return if (ranked.isEmpty()) emptyList() else ranked.subList(start, end + 1)
+        // Always show the top podium, plus a window of WINDOW_RADIUS entries above
+        // and below the current player. Ranks are contiguous within each group, so
+        // any gap between them is rendered as an ellipsis by the UI.
+        val selfIndex = ranked.indexOfFirst { it.isCurrentPlayer }.coerceAtLeast(0)
+        val windowStart = (selfIndex - WINDOW_RADIUS).coerceAtLeast(0)
+        val windowEnd = (selfIndex + WINDOW_RADIUS).coerceAtMost(ranked.lastIndex)
+
+        val selected = LinkedHashSet<LeaderboardEntry>()
+        ranked.take(TOP_COUNT).forEach(selected::add)
+        for (index in windowStart..windowEnd) selected.add(ranked[index])
+
+        return selected.sortedBy { it.rank }
     }
 
     private suspend fun getOrCreateProfile(): PlayerProfile {
@@ -150,7 +159,8 @@ class LeaderboardRepository(
     }
 
     private companion object {
-        const val WINDOW_RADIUS = 4
+        const val TOP_COUNT = 3
+        const val WINDOW_RADIUS = 5
         const val MILLIS_IN_DAY = 86_400_000L
         const val DEFAULT_PLAYER_NAME = "Player"
     }

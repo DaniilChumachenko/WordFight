@@ -54,9 +54,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -92,6 +96,14 @@ private const val DAY_SKY_JSON_PATH = "files/day_sky.json"
 
 private var cachedNightSkyJson: String? = null
 private var cachedDaySkyJson: String? = null
+
+/**
+ * The sky background is decorative and drawn at low opacity, so we rasterize the
+ * (heavy) Lottie at a fraction of the screen resolution and let the GPU upscale.
+ * A factor of 2 cuts the per-frame pixel/raster work roughly 4x with no
+ * perceptible difference at this alpha. Increase for more savings / softer image.
+ */
+private const val SKY_RENDER_DOWNSCALE = 2
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -483,21 +495,14 @@ private fun AnimatedSkyBackground(modifier: Modifier = Modifier) {
             }
         }
 
+        // Only load the JSON for the currently active theme. If the theme is
+        // toggled while on screen, this effect re-runs (keyed on isDarkTheme)
+        // and loads the other one on demand.
         if (isDarkTheme && nightJson == null) {
             val loaded = loadJson(NIGHT_SKY_JSON_PATH)
             nightJson = loaded
             cachedNightSkyJson = loaded
         } else if (!isDarkTheme && dayJson == null) {
-            val loaded = loadJson(DAY_SKY_JSON_PATH)
-            dayJson = loaded
-            cachedDaySkyJson = loaded
-        }
-
-        if (!isDarkTheme && nightJson == null) {
-            val loaded = loadJson(NIGHT_SKY_JSON_PATH)
-            nightJson = loaded
-            cachedNightSkyJson = loaded
-        } else if (isDarkTheme && dayJson == null) {
             val loaded = loadJson(DAY_SKY_JSON_PATH)
             dayJson = loaded
             cachedDaySkyJson = loaded
@@ -525,15 +530,30 @@ private fun AnimatedSkyBackground(modifier: Modifier = Modifier) {
         iterations = Compottie.IterateForever,
     )
 
-    Image(
-        painter = rememberLottiePainter(
-            composition = composition,
-            progress = { progress },
-        ),
-        contentDescription = null,
-        contentScale = ContentScale.Crop,
-        modifier = modifier,
-    )
+    Box(modifier = modifier) {
+        Image(
+            painter = rememberLottiePainter(
+                composition = composition,
+                progress = { progress },
+            ),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                // Scale the half-resolution render back up to fill the box.
+                .graphicsLayer {
+                    scaleX = SKY_RENDER_DOWNSCALE.toFloat()
+                    scaleY = SKY_RENDER_DOWNSCALE.toFloat()
+                    transformOrigin = TransformOrigin(0f, 0f)
+                }
+                // Force the painter to rasterize at a fraction of the box size.
+                .layout { measurable, constraints ->
+                    val w = (constraints.maxWidth / SKY_RENDER_DOWNSCALE).coerceAtLeast(1)
+                    val h = (constraints.maxHeight / SKY_RENDER_DOWNSCALE).coerceAtLeast(1)
+                    val placeable = measurable.measure(Constraints.fixed(w, h))
+                    layout(w, h) { placeable.place(0, 0) }
+                },
+        )
+    }
 }
 
 private enum class StatusBarMode {

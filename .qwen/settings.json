@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(D:\\WORK\\myWordFight\\composeApp\\src\\commonMain\\kotlin\\com/**)"
+    ]
+  }
+}

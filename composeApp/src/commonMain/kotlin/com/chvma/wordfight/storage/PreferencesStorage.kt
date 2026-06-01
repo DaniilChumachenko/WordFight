@@ -18,11 +18,10 @@ class WordStorageImpl(
     private val wordsKey = "saved_words"
     private val bestScoreKey = "best_score"
     private val separator = "|||"
-    private val itemSeparator = ":::"
 
     override suspend fun saveWord(word: WordContent) {
         val words = getAllWords().toMutableList()
-        if (words.none { it.id == word.id }) {
+        if (words.none { it.word == word.word }) {
             words.add(word)
             saveWords(words)
         }
@@ -33,11 +32,12 @@ class WordStorageImpl(
         if (data.isEmpty()) return emptyList()
 
         return try {
-            data.split(separator).mapNotNull { item ->
-                val parts = item.split(itemSeparator)
-                val id = parts.firstOrNull()?.toIntOrNull() ?: return@mapNotNull null
-                WordRepository.byId(id)
-                    ?: parts.getOrNull(1)?.let { WordRepository.byWord(it) }
+            data.split(separator).mapNotNull { token ->
+                val key = token.trim()
+                if (key.isEmpty()) return@mapNotNull null
+                // Persisted by the stable word key; fall back to the legacy
+                // numeric id format for data saved by older app versions.
+                WordRepository.byWord(key) ?: key.toIntOrNull()?.let { WordRepository.byId(it) }
             }
         } catch (e: Exception) {
             emptyList()
@@ -54,9 +54,7 @@ class WordStorageImpl(
     }
 
     private suspend fun saveWords(words: List<WordContent>) {
-        val data = words.joinToString(separator) { word ->
-            "${word.id}"
-        }
+        val data = words.joinToString(separator) { it.word }
         preferences.putString(wordsKey, data)
     }
 
