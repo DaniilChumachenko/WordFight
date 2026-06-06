@@ -32,7 +32,8 @@
       "PowerShell(.\\\\gradlew.bat :composeApp:compileDebugKotlinAndroid 2>&1 | Select-Object -Last 30)",
       "PowerShell(.\\\\gradlew.bat :composeApp:compileDebugKotlinAndroid -q 2>&1 | Select-Object -Last 25)",
       "PowerShell(.\\\\gradlew.bat :composeApp:compileDebugKotlinAndroid -q 2>&1 | Select-Object -Last 30)",
-      "PowerShell(.\\\\gradlew.bat :composeApp:compileDebugKotlinAndroid -q 2>&1 | Select-Object -Last 20)"
+      "PowerShell(.\\\\gradlew.bat :composeApp:compileDebugKotlinAndroid -q 2>&1 | Select-Object -Last 20)",
+      "WebFetch(domain:www.speak.com)"
     ]
   }
 }

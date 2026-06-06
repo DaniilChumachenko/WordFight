@@ -26,6 +26,27 @@ class WordMatcherTest {
     }
 
     @Test
+    fun matchesWordHeardAsSingleLetterName() {
+        // ASR spells short words as the letter they sound like.
+        assertTrue(matcher.matches("X.", "axe"))
+        assertTrue(matcher.matches("ax", "axe"))
+    }
+
+    @Test
+    fun matchesWordsContainingXAsKsSound() {
+        assertTrue(matcher.matches("focks", "fox"))
+        assertTrue(matcher.matches("six", "sicks"))
+    }
+
+    @Test
+    fun doesNotConfuseShortVowelMinimalPairs() {
+        // "ox" and "axe" differ only in the vowel; the single-letter leniency must
+        // not leak into ordinary words and make them match each other.
+        assertFalse(matcher.matches("ox", "axe"))
+        assertFalse(matcher.matches("axe", "ox"))
+    }
+
+    @Test
     fun keepsUnrelatedWordsSeparate() {
         assertFalse(matcher.matches("play", "pillow"))
         assertFalse(matcher.matches("spoon", "stairs"))

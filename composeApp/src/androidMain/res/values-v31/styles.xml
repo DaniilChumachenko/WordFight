@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <style name="AppTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">#101426</item>
         <item name="android:windowSplashScreenBackground">#101426</item>
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon_empty</item>
         <item name="android:windowSplashScreenAnimationDuration">0</item>
+        <!-- Compose controls light/dark via isSystemInDarkTheme(); disable OS force-dark
+             so MIUI/HyperOS doesn't double-invert colors. -->
+        <item name="android:forceDarkAllowed" tools:targetApi="q">false</item>
     </style>
 </resources>

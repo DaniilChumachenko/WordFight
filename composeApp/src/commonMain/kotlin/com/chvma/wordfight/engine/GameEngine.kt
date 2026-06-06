@@ -147,8 +147,11 @@ class GameEngine(
     fun tryMatch(spoken: String): Boolean {
         val current = _state.value
         if (current.isGameOver || current.isPaused) return false
+        val expectedWords = current.activeCards.map { it.content.word }
+        println("WordMatch: spoken=\"$spoken\" expected=$expectedWords")
         val matched = current.activeCards.firstOrNull { wordMatcher.matches(spoken, it.content.word) }
         if (matched != null) {
+            println("WordMatch: MATCHED spoken=\"$spoken\" -> expected=\"${matched.content.word}\"")
             val newScore = current.score + 1
             if (newScore > bestScore) bestScore = newScore
             val remaining = current.activeCards - matched
@@ -166,6 +169,7 @@ class GameEngine(
             )
             return true
         }
+        println("WordMatch: NO MATCH for spoken=\"$spoken\"")
         return false
     }
 

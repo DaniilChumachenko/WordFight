@@ -31,28 +31,42 @@ class WordMatcher {
 
         if (targetTokens.size == 1) {
             val targetToken = targetTokens.first()
-            return spokenTokens.any { spokenToken ->
-                tokenVariants(spokenToken).any { spokenVariant ->
-                    tokenMatches(spokenVariant, targetToken)
-                }
-            }
+            return spokenTokens.any { spokenTokenMatches(it, targetToken) }
         }
 
         // Multi-word cards like "life jacket" or "washing machine" should survive
         // small ASR differences in each word, without requiring an exact phrase.
         return targetTokens.all { targetToken ->
-            spokenTokens.any { spokenToken ->
-                tokenVariants(spokenToken).any { spokenVariant ->
-                    tokenMatches(spokenVariant, targetToken)
-                }
-            }
+            spokenTokens.any { spokenTokenMatches(it, targetToken) }
         }
     }
 
-    private fun tokenMatches(spoken: String, target: String): Boolean {
+    private fun spokenTokenMatches(spokenToken: String, targetToken: String): Boolean {
+        if (tokenVariants(spokenToken).any { tokenMatches(it, targetToken) }) return true
+
+        // ASR often transcribes a short word as the single letter it sounds like
+        // ("axe" -> "x"). Compare the letter's spoken name, tolerating the vowel
+        // onset ("x" /ɛks/ vs "axe" /æks/). Scoped to single letters on purpose,
+        // so ordinary short words (e.g. "ox" vs "axe") keep their strict onset.
+        if (spokenToken.length == 1) {
+            val letterName = letterNames[spokenToken.first()]
+            if (letterName != null &&
+                tokenMatches(letterName, targetToken, allowVowelOnsetMismatch = true)
+            ) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun tokenMatches(
+        spoken: String,
+        target: String,
+        allowVowelOnsetMismatch: Boolean = false,
+    ): Boolean {
         if (spoken == target) return true
         if (fuzzyMatches(spoken, target)) return true
-        return phoneticMatches(spoken, target)
+        return phoneticMatches(spoken, target, allowVowelOnsetMismatch)
     }
 
     private fun fuzzyMatches(spoken: String, target: String): Boolean {
@@ -66,9 +80,15 @@ class WordMatcher {
         return levenshtein(spoken, target) <= maxDistance
     }
 
-    private fun phoneticMatches(spoken: String, target: String): Boolean {
+    private fun phoneticMatches(
+        spoken: String,
+        target: String,
+        allowVowelOnsetMismatch: Boolean = false,
+    ): Boolean {
         if (spoken.length < 2 || target.length < 3) return false
-        if (firstSound(spoken) != firstSound(target)) return false
+        val onsetMatches = firstSound(spoken) == firstSound(target) ||
+            (allowVowelOnsetMismatch && isVowelOnset(spoken) && isVowelOnset(target))
+        if (!onsetMatches) return false
 
         val spokenKey = phoneticKey(spoken)
         val targetKey = phoneticKey(target)
@@ -115,6 +135,7 @@ class WordMatcher {
             .replace("ck", "k")
             .replace("ght", "t")
             .replace("gh", "")
+            .replace("x", "ks") // x is the /ks/ sound: fox, ox, six, axe...
 
         if (word.length > 3 && word.endsWith("e")) {
             word = word.dropLast(1)
@@ -135,6 +156,8 @@ class WordMatcher {
         }
         return normalized.first()
     }
+
+    private fun isVowelOnset(value: String): Boolean = value.firstOrNull() in vowelChars
 
     private fun containsWholePhrase(spoken: String, target: String): Boolean {
         if (spoken == target) return true
@@ -170,6 +193,8 @@ class WordMatcher {
     }
 
     private companion object {
+        val vowelChars = "aeiouy".toSet()
+
         val asrAliases = mapOf(
             "plate" to setOf("play", "played", "plait"),
             "wheel" to setOf("will", "we'll", "well"),
@@ -178,6 +203,19 @@ class WordMatcher {
             "match" to setOf("much"),
             "ruler" to setOf("roller"),
             "flashlight" to setOf("flash light", "flesh light"),
+        )
+
+        // English letter names as ASR tends to spell them out. Short words are often
+        // transcribed as a single letter whose name is a near-homophone of the word
+        // (e.g. "axe" -> "x", "are" -> "r"). This is a language-level table (26 entries),
+        // not a per-word workaround, so it scales to the whole vocabulary.
+        val letterNames = mapOf(
+            'a' to "ay", 'b' to "bee", 'c' to "see", 'd' to "dee", 'e' to "ee",
+            'f' to "ef", 'g' to "jee", 'h' to "aitch", 'i' to "eye", 'j' to "jay",
+            'k' to "kay", 'l' to "el", 'm' to "em", 'n' to "en", 'o' to "oh",
+            'p' to "pee", 'q' to "cue", 'r' to "are", 's' to "ess", 't' to "tee",
+            'u' to "you", 'v' to "vee", 'w' to "double u", 'x' to "eks", 'y' to "why",
+            'z' to "zee",
         )
     }
 }
