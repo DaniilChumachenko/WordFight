@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -25,7 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -40,6 +38,7 @@ import com.chvma.wordfight.speech.rememberPermissionRequester
 fun HomeScreen(
     bestScore: Int,
     onStartGame: () -> Unit,
+    onCategories: () -> Unit,
     onMyWords: () -> Unit,
     onLanguages: () -> Unit,
     onLeaderboard: () -> Unit,
@@ -151,48 +150,51 @@ fun HomeScreen(
 
                 Spacer(Modifier.height(48.dp))
 
-                Button(
+                val homeButtonModifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .fillMaxWidth(0.72f)
+
+                GradientButton(
+                    text = strings.categories,
+                    onClick = onCategories,
+                    baseColor = Color(0xFF17D71D),
+                    effect = ButtonEffect.Sparkle,
+                    seed = 0,
+                    modifier = homeButtonModifier,
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                GradientButton(
+                    text = strings.myWords,
                     onClick = onMyWords,
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                ) {
-                    Text(
-                        text = strings.myWords,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-                    )
-                }
+                    baseColor = Color(0xFF0D7BD7),
+                    effect = ButtonEffect.Sparkle,
+                    seed = 1,
+                    modifier = homeButtonModifier,
+                )
 
                 Spacer(Modifier.height(16.dp))
 
-                Button(
+                GradientButton(
+                    text = strings.languages,
                     onClick = onLanguages,
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary),
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                ) {
-                    Text(
-                        text = strings.languages,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-                    )
-                }
+                    baseColor = Color(0xFFE58900),
+                    effect = ButtonEffect.Sparkle,
+                    seed = 2,
+                    modifier = homeButtonModifier,
+                )
 
                 Spacer(Modifier.height(16.dp))
 
-                Button(
+                GradientButton(
+                    text = strings.leaderboard,
                     onClick = onLeaderboard,
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                ) {
-                    Text(
-                        text = strings.leaderboard,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-                    )
-                }
+                    baseColor = Color(0xFFBB17DB),
+                    effect = ButtonEffect.Sparkle,
+                    seed = 3,
+                    modifier = homeButtonModifier,
+                )
             }
         }
     }

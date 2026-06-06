@@ -6,11 +6,14 @@ import com.chvma.wordfight.ads.AdUnitIds
 import com.chvma.wordfight.ads.RewardedAdManager
 import com.chvma.wordfight.ads.createInterstitialAdManager
 import com.chvma.wordfight.audio.BgmTrack
+import com.chvma.wordfight.content.WordRepository
 import com.chvma.wordfight.audio.createBgmPlayer
 import com.chvma.wordfight.engine.GameEngine
 import com.chvma.wordfight.leaderboard.LeaderboardPeriod
 import com.chvma.wordfight.leaderboard.createLeaderboardRepository
 import com.chvma.wordfight.localization.AppLanguage
+import com.chvma.wordfight.localization.Localization
+import com.chvma.wordfight.model.WordCategory
 import com.chvma.wordfight.speech.createPermissionManager
 import com.chvma.wordfight.speech.createSpeechEngine
 import com.chvma.wordfight.storage.createSettingsStorage
@@ -51,6 +54,14 @@ class AppViewModel : ViewModel() {
     private var adsLoaded = false
     private var myWordsTransitions = 0
     private var leaderboardTransitions = 0
+
+    // Only full-catalogue games (main menu / "all topics, all difficulty") count
+    // toward the rating. Topic/difficulty/saved-words sessions are excluded.
+    private var currentGameRanked = true
+
+    // Human-readable description of the current finite session (topic + difficulty
+    // or "my words"); null for ranked/full games. Shown on the results screen.
+    private var currentSessionLabel: String? = null
 
     /** Loads persisted settings and dismisses the splash once ready. */
     fun onStart() {
@@ -105,12 +116,90 @@ class AppViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.Default) { settingsStorage.setLanguage(language) }
     }
 
+    /**
+     * Starts a fresh game over the full word catalogue and then navigates via
+     * [onReady]. Use this for the main "tap to start" flow.
+     */
+    fun startFullGame(onReady: () -> Unit) {
+        currentGameRanked = true
+        currentSessionLabel = null
+        gameEngine.setWordPool(WordRepository.words, limited = false)
+        gameEngine.restart()
+        onReady()
+    }
+
+    /**
+     * Starts a fresh game restricted to the player's saved words (review mode),
+     * then navigates via [onReady]. No-op when there are no saved words yet.
+     */
+    fun startSavedWordsGame(onReady: () -> Unit) {
+        viewModelScope.launch {
+            val saved = withContext(Dispatchers.Default) { wordStorage.getAllWords() }
+            if (saved.isEmpty()) return@launch
+            currentGameRanked = false
+            currentSessionLabel = Localization.strings(_uiState.value.language).myWords
+            gameEngine.setWordPool(saved, limited = true)
+            gameEngine.restart()
+            onReady()
+        }
+    }
+
+    /**
+     * Starts a fresh game restricted to a topic and/or difficulty, then navigates
+     * via [onReady]. [category] = null means all topics, [level] = null means all
+     * difficulties. No-op if the resulting pool is empty.
+     */
+    fun startCategoryGame(category: WordCategory?, level: Int?, onReady: () -> Unit) {
+        val pool = WordRepository.wordsFor(category, level)
+        if (pool.isEmpty()) return
+        // "All topics" with no difficulty filter == the full catalogue → ranked,
+        // endless. Any narrower selection is a finite, unranked session.
+        val isFullCatalogue = category == null && level == null
+        currentGameRanked = isFullCatalogue
+        currentSessionLabel = if (isFullCatalogue) null else sessionLabel(category, level)
+        gameEngine.setWordPool(pool, limited = !isFullCatalogue)
+        gameEngine.restart()
+        onReady()
+    }
+
+    /** "Topic · ⭐⭐"-style label for a finite session, in the current language. */
+    private fun sessionLabel(category: WordCategory?, level: Int?): String {
+        val language = _uiState.value.language
+        val strings = Localization.strings(language)
+        val topic = if (category == null) strings.allTopics else Localization.categoryName(category, language)
+        val difficulty = level?.let { " · " + "⭐".repeat(it) } ?: ""
+        return topic + difficulty
+    }
+
     fun restartGame() = gameEngine.restart()
 
     fun onGameOver(score: Int, best: Int) {
-        val updatedBest = maxOf(_uiState.value.bestScore, best, score)
         val missed = gameEngine.getMissedWords()
-        _uiState.update { it.copy(lastScore = score, bestScore = updatedBest, missedWords = missed) }
+        if (!currentGameRanked) {
+            // Topic / difficulty / saved-words session — show results but keep it
+            // out of the rating and personal best.
+            val won = gameEngine.state.value.won
+            _uiState.update {
+                it.copy(
+                    lastScore = score,
+                    lastGameRanked = false,
+                    lastGameWon = won,
+                    lastSessionLabel = currentSessionLabel.orEmpty(),
+                    missedWords = missed,
+                )
+            }
+            return
+        }
+        val updatedBest = maxOf(_uiState.value.bestScore, score)
+        _uiState.update {
+            it.copy(
+                lastScore = score,
+                lastGameRanked = true,
+                lastGameWon = false,
+                bestScore = updatedBest,
+                missedWords = missed,
+            )
+        }
         viewModelScope.launch(Dispatchers.Default) {
             wordStorage.saveBestScore(updatedBest)
             leaderboardRepository.submitGameScore(score)

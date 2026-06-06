@@ -10,11 +10,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -22,6 +25,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -42,6 +46,7 @@ import com.chvma.wordfight.localization.AppLanguage
 import com.chvma.wordfight.localization.AppStrings
 import com.chvma.wordfight.model.WordContent
 import com.chvma.wordfight.speech.createSpeechPlayer
+import com.chvma.wordfight.speech.rememberPermissionRequester
 import com.chvma.wordfight.storage.createWordStorage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -52,6 +57,7 @@ import org.jetbrains.compose.resources.painterResource
 @Composable
 fun MyWordsScreen(
     onBack: () -> Unit,
+    onPlay: () -> Unit,
     musicEnabled: Boolean,
     onToggleMusic: () -> Unit,
     language: AppLanguage,
@@ -61,6 +67,7 @@ fun MyWordsScreen(
     val wordStorage = remember { createWordStorage() }
     var words by remember { mutableStateOf<List<WordContent>>(emptyList()) }
     val scope = rememberCoroutineScope()
+    val permissionRequester = rememberPermissionRequester { }
 
     LaunchedEffect(Unit) {
         words = withContext(Dispatchers.Default) {
@@ -101,7 +108,44 @@ fun MyWordsScreen(
             )
         },
         bottomBar = {
-            BannerAdView()
+            Column {
+                if (words.isNotEmpty()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(horizontal = 24.dp, vertical = 12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text(
+                            text = strings.playSavedWordsHint,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                            fontSize = 13.sp,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                permissionRequester.requestPermission { granted ->
+                                    if (granted) onPlay()
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        ) {
+                            Text(
+                                text = strings.playSavedWords,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp),
+                            )
+                        }
+                    }
+                }
+                BannerAdView()
+            }
         },
     ) { paddingValues ->
         if (words.isEmpty()) {

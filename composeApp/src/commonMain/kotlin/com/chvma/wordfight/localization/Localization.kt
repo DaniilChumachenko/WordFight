@@ -1,5 +1,7 @@
 package com.chvma.wordfight.localization
 
+import com.chvma.wordfight.model.WordCategory
+
 enum class AppLanguage(
     val code: String,
     val nativeName: String,
@@ -26,8 +28,17 @@ data class AppStrings(
     val scoreLabel: String,
     val tapToStart: String,
     val myWords: String,
+    val playSavedWords: String,
+    val playSavedWordsHint: String,
+    val categories: String,
+    val categoriesHint: String,
+    val allTopics: String,
+    val difficultyAll: String,
     val languages: String,
     val gameOver: String,
+    val completed: String,
+    val notRankedNote: String,
+    val allWordsDone: String,
     val missedWords: String,
     val noSavedWords: String,
     val home: String,
@@ -51,6 +62,62 @@ data class AppStrings(
 )
 
 object Localization {
+    /** Localised display name for a word [category]. */
+    fun categoryName(category: WordCategory, language: AppLanguage): String = when (category) {
+        WordCategory.ANIMALS -> when (language) {
+            AppLanguage.EN -> "Animals"; AppLanguage.RU -> "Животные"; AppLanguage.UA -> "Тварини"
+            AppLanguage.FR -> "Animaux"; AppLanguage.ES -> "Animales"
+        }
+        WordCategory.FRUIT_VEG -> when (language) {
+            AppLanguage.EN -> "Fruit & veg"; AppLanguage.RU -> "Фрукты и овощи"; AppLanguage.UA -> "Фрукти й овочі"
+            AppLanguage.FR -> "Fruits & légumes"; AppLanguage.ES -> "Frutas y verduras"
+        }
+        WordCategory.FOOD -> when (language) {
+            AppLanguage.EN -> "Food & drink"; AppLanguage.RU -> "Еда и напитки"; AppLanguage.UA -> "Їжа й напої"
+            AppLanguage.FR -> "Nourriture"; AppLanguage.ES -> "Comida y bebida"
+        }
+        WordCategory.TRANSPORT -> when (language) {
+            AppLanguage.EN -> "Transport"; AppLanguage.RU -> "Транспорт"; AppLanguage.UA -> "Транспорт"
+            AppLanguage.FR -> "Transport"; AppLanguage.ES -> "Transporte"
+        }
+        WordCategory.HOME -> when (language) {
+            AppLanguage.EN -> "Home & objects"; AppLanguage.RU -> "Дом и вещи"; AppLanguage.UA -> "Дім і речі"
+            AppLanguage.FR -> "Maison & objets"; AppLanguage.ES -> "Casa y objetos"
+        }
+        WordCategory.TOOLS -> when (language) {
+            AppLanguage.EN -> "Tools"; AppLanguage.RU -> "Инструменты"; AppLanguage.UA -> "Інструменти"
+            AppLanguage.FR -> "Outils"; AppLanguage.ES -> "Herramientas"
+        }
+        WordCategory.SCHOOL -> when (language) {
+            AppLanguage.EN -> "School & office"; AppLanguage.RU -> "Школа и офис"; AppLanguage.UA -> "Школа й офіс"
+            AppLanguage.FR -> "École & bureau"; AppLanguage.ES -> "Escuela y oficina"
+        }
+        WordCategory.ELECTRONICS -> when (language) {
+            AppLanguage.EN -> "Electronics"; AppLanguage.RU -> "Электроника"; AppLanguage.UA -> "Електроніка"
+            AppLanguage.FR -> "Électronique"; AppLanguage.ES -> "Electrónica"
+        }
+        WordCategory.MUSIC -> when (language) {
+            AppLanguage.EN -> "Instruments"; AppLanguage.RU -> "Инструменты (муз.)"; AppLanguage.UA -> "Інструменти (муз.)"
+            AppLanguage.FR -> "Instruments"; AppLanguage.ES -> "Instrumentos"
+        }
+        WordCategory.CLOTHING -> when (language) {
+            AppLanguage.EN -> "Clothing"; AppLanguage.RU -> "Одежда"; AppLanguage.UA -> "Одяг"
+            AppLanguage.FR -> "Vêtements"; AppLanguage.ES -> "Ropa"
+        }
+        WordCategory.SPORTS -> when (language) {
+            AppLanguage.EN -> "Sports"; AppLanguage.RU -> "Спорт"; AppLanguage.UA -> "Спорт"
+            AppLanguage.FR -> "Sports"; AppLanguage.ES -> "Deportes"
+        }
+        WordCategory.NATURE -> when (language) {
+            AppLanguage.EN -> "Nature & misc"; AppLanguage.RU -> "Природа и разное"; AppLanguage.UA -> "Природа й інше"
+            AppLanguage.FR -> "Nature & divers"; AppLanguage.ES -> "Naturaleza y otros"
+        }
+        WordCategory.OTHER -> when (language) {
+            AppLanguage.EN -> "Other"; AppLanguage.RU -> "Другое"; AppLanguage.UA -> "Інше"
+            AppLanguage.FR -> "Autres"; AppLanguage.ES -> "Otros"
+        }
+    }
+
     fun strings(language: AppLanguage): AppStrings {
         return when (language) {
             AppLanguage.EN -> AppStrings(
@@ -59,8 +126,17 @@ object Localization {
                 scoreLabel = "Score",
                 tapToStart = "Tap to start!",
                 myWords = "My words",
+                playSavedWords = "Play",
+                playSavedWordsHint = "The game will use only the words you saved for review.",
+                categories = "Topics",
+                categoriesHint = "Pick a topic and difficulty to practise.",
+                allTopics = "All topics",
+                difficultyAll = "All",
                 languages = "Languages",
                 gameOver = "Game Over",
+                completed = "Done!",
+                notRankedNote = "Practice result — not counted in the rating",
+                allWordsDone = "All words in this set are done! 🎉",
                 missedWords = "Missed words",
                 noSavedWords = "No saved words yet",
                 home = "Home",
@@ -88,8 +164,17 @@ object Localization {
                 scoreLabel = "Счет",
                 tapToStart = "Нажми, чтобы начать!",
                 myWords = "Мои слова",
+                playSavedWords = "Играть",
+                playSavedWordsHint = "Игра будет только по словам, которые вы сохранили для повторения.",
+                categories = "Темы",
+                categoriesHint = "Выберите тему и сложность для тренировки.",
+                allTopics = "Все темы",
+                difficultyAll = "Все",
                 languages = "Языки",
                 gameOver = "Игра окончена",
+                completed = "Готово!",
+                notRankedNote = "Тренировка — результат не идёт в рейтинг",
+                allWordsDone = "Все слова в этом наборе пройдены! 🎉",
                 missedWords = "Пропущенные слова",
                 noSavedWords = "Сохраненных слов пока нет",
                 home = "Главная",
@@ -117,8 +202,17 @@ object Localization {
                 scoreLabel = "Рахунок",
                 tapToStart = "Натисни, щоб почати!",
                 myWords = "Мої слова",
+                playSavedWords = "Грати",
+                playSavedWordsHint = "Гра буде лише за словами, які ви зберегли для повторення.",
+                categories = "Теми",
+                categoriesHint = "Оберіть тему та складність для тренування.",
+                allTopics = "Усі теми",
+                difficultyAll = "Усі",
                 languages = "Мови",
                 gameOver = "Гру завершено",
+                completed = "Готово!",
+                notRankedNote = "Тренування — результат не йде в рейтинг",
+                allWordsDone = "Усі слова в цьому наборі пройдено! 🎉",
                 missedWords = "Пропущені слова",
                 noSavedWords = "Збережених слів поки немає",
                 home = "Головна",
@@ -146,8 +240,17 @@ object Localization {
                 scoreLabel = "Score",
                 tapToStart = "Appuie pour commencer !",
                 myWords = "Mes mots",
+                playSavedWords = "Jouer",
+                playSavedWordsHint = "Le jeu utilisera uniquement les mots que vous avez enregistrés pour révision.",
+                categories = "Thèmes",
+                categoriesHint = "Choisissez un thème et une difficulté.",
+                allTopics = "Tous les thèmes",
+                difficultyAll = "Tous",
                 languages = "Langues",
                 gameOver = "Fin de partie",
+                completed = "Terminé !",
+                notRankedNote = "Entraînement — non compté dans le classement",
+                allWordsDone = "Tous les mots de cet ensemble sont faits ! 🎉",
                 missedWords = "Mots manqués",
                 noSavedWords = "Aucun mot enregistré pour l'instant",
                 home = "Accueil",
@@ -175,8 +278,17 @@ object Localization {
                 scoreLabel = "Puntuación",
                 tapToStart = "Toca para empezar!",
                 myWords = "Mis palabras",
+                playSavedWords = "Jugar",
+                playSavedWordsHint = "El juego usará solo las palabras que guardaste para repasar.",
+                categories = "Temas",
+                categoriesHint = "Elige un tema y una dificultad para practicar.",
+                allTopics = "Todos los temas",
+                difficultyAll = "Todos",
                 languages = "Idiomas",
                 gameOver = "Fin del juego",
+                completed = "¡Listo!",
+                notRankedNote = "Práctica — no cuenta para la clasificación",
+                allWordsDone = "¡Todas las palabras de este conjunto están hechas! 🎉",
                 missedWords = "Palabras perdidas",
                 noSavedWords = "Aún no hay palabras guardadas",
                 home = "Inicio",

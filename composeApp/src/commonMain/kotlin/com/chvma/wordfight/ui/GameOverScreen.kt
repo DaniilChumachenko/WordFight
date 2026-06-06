@@ -125,11 +125,15 @@ fun GameOverScreen(
     missedWords: List<WordContent>,
     onRestart: () -> Unit,
     onHome: () -> Unit = {},
+    isRanked: Boolean = true,
+    won: Boolean = false,
+    sessionLabel: String = "",
     musicEnabled: Boolean,
     onToggleMusic: () -> Unit,
     language: AppLanguage,
     strings: AppStrings,
 ) {
+    val title = if (isRanked) strings.gameOver else strings.completed
     val speechPlayer = remember { createSpeechPlayer() }
     val wordStorage = remember { createWordStorage() }
     var savedWords by remember { mutableStateOf<Set<String>>(emptySet()) }
@@ -153,7 +157,7 @@ fun GameOverScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = strings.gameOver,
+                        text = title,
                         color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
@@ -186,7 +190,7 @@ fun GameOverScreen(
                 verticalArrangement = Arrangement.Center,
             ) {
                 Text(
-                    text = strings.gameOver + "!",
+                    text = if (isRanked) "${strings.gameOver}!" else strings.completed,
                     color = MaterialTheme.colorScheme.primary,
                     fontSize = 36.sp,
                     fontWeight = FontWeight.Bold,
@@ -203,14 +207,43 @@ fun GameOverScreen(
                     textAlign = TextAlign.Center,
                 )
 
-                Spacer(Modifier.height(6.dp))
-
-                Text(
-                    text = "${strings.bestLabel}: $bestScore",
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                    fontSize = 20.sp,
-                    textAlign = TextAlign.Center,
-                )
+                if (isRanked) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = "${strings.bestLabel}: $bestScore",
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                        fontSize = 20.sp,
+                        textAlign = TextAlign.Center,
+                    )
+                } else {
+                    if (sessionLabel.isNotBlank()) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = sessionLabel,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                    if (won) {
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = strings.allWordsDone,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = strings.notRankedNote,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center,
+                    )
+                }
 
                 if (missedWords.isNotEmpty()) {
                     Spacer(Modifier.height(14.dp))

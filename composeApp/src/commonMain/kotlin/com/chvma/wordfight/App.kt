@@ -19,6 +19,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.chvma.wordfight.localization.Localization
 import com.chvma.wordfight.ui.AppSplashScreen
+import com.chvma.wordfight.ui.CategoryScreen
 import com.chvma.wordfight.ui.GameOverScreen
 import com.chvma.wordfight.ui.GameScreen
 import com.chvma.wordfight.ui.HomeScreen
@@ -35,6 +36,7 @@ private object Routes {
     const val GAME = "game"
     const val GAME_OVER = "gameOver"
     const val MY_WORDS = "myWords"
+    const val CATEGORIES = "categories"
     const val LANGUAGES = "languages"
     const val LEADERBOARD = "leaderboard"
     const val ONBOARDING = "onboarding"
@@ -88,7 +90,8 @@ fun App(isSdkReady: Boolean = true) {
                     composable(Routes.HOME) {
                         HomeScreen(
                             bestScore = uiState.bestScore,
-                            onStartGame = { navController.navigate(Routes.GAME) },
+                            onStartGame = { viewModel.startFullGame { navController.navigate(Routes.GAME) } },
+                            onCategories = { navController.navigate(Routes.CATEGORIES) },
                             onMyWords = { viewModel.openMyWords { navController.navigate(Routes.MY_WORDS) } },
                             onLanguages = { navController.navigate(Routes.LANGUAGES) },
                             onLeaderboard = {
@@ -133,6 +136,9 @@ fun App(isSdkReady: Boolean = true) {
                             score = uiState.lastScore,
                             bestScore = uiState.bestScore,
                             missedWords = uiState.missedWords,
+                            isRanked = uiState.lastGameRanked,
+                            won = uiState.lastGameWon,
+                            sessionLabel = uiState.lastSessionLabel,
                             onRestart = {
                                 viewModel.restartGame()
                                 navController.navigate(Routes.GAME) {
@@ -153,6 +159,26 @@ fun App(isSdkReady: Boolean = true) {
                     composable(Routes.MY_WORDS) {
                         MyWordsScreen(
                             onBack = { navController.popBackStack() },
+                            onPlay = {
+                                viewModel.startSavedWordsGame {
+                                    navController.navigate(Routes.GAME)
+                                }
+                            },
+                            musicEnabled = uiState.isMenuMusicEnabled,
+                            onToggleMusic = { viewModel.toggleMenuMusic() },
+                            language = uiState.language,
+                            strings = strings,
+                        )
+                    }
+
+                    composable(Routes.CATEGORIES) {
+                        CategoryScreen(
+                            onBack = { navController.popBackStack() },
+                            onSelect = { category, level ->
+                                viewModel.startCategoryGame(category, level) {
+                                    navController.navigate(Routes.GAME)
+                                }
+                            },
                             musicEnabled = uiState.isMenuMusicEnabled,
                             onToggleMusic = { viewModel.toggleMenuMusic() },
                             language = uiState.language,

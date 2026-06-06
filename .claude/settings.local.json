@@ -15,7 +15,24 @@
       "Bash(./gradlew :composeApp:generateResourceAccessorsForCommonMain -q)",
       "Read(//tmp/**)",
       "Bash(grep -nE \"^import wordfight.composeapp.generated.resources\\\\.\\(Res|zebra_3d\\)$\" composeApp/src/commonMain/kotlin/com/chvma/wordfight/content/WordRepository.kt)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Read(//tmp/moon/**)",
+      "Bash(javap -p ai/moonshine/voice/Transcriber.class ai/moonshine/voice/JNI.class)",
+      "Bash(javap -c -p ai/moonshine/voice/Transcriber.class)",
+      "Bash(javap -p ai/moonshine/voice/MicTranscriber.class)",
+      "Bash(javap -p ai/moonshine/voice/MicCaptureProcessor.class)",
+      "Bash(javap -c -p ai/moonshine/voice/MicTranscriber.class)",
+      "PowerShell(.\\\\gradlew.bat :composeApp:compileDebugKotlinAndroid -q 2>&1 | Select-Object -Last 40)",
+      "Bash(javap -p ai/moonshine/voice/Transcript.class)",
+      "Bash(javap -p ai/moonshine/voice/TranscriptLine.class)",
+      "WebSearch",
+      "WebFetch(domain:search.maven.org)",
+      "Bash(curl -s \"https://repo1.maven.org/maven2/ai/moonshine/moonshine-voice/maven-metadata.xml\")",
+      "WebFetch(domain:github.com)",
+      "PowerShell(.\\\\gradlew.bat :composeApp:compileDebugKotlinAndroid 2>&1 | Select-Object -Last 30)",
+      "PowerShell(.\\\\gradlew.bat :composeApp:compileDebugKotlinAndroid -q 2>&1 | Select-Object -Last 25)",
+      "PowerShell(.\\\\gradlew.bat :composeApp:compileDebugKotlinAndroid -q 2>&1 | Select-Object -Last 30)",
+      "PowerShell(.\\\\gradlew.bat :composeApp:compileDebugKotlinAndroid -q 2>&1 | Select-Object -Last 20)"
     ]
   }
 }

@@ -25,10 +25,13 @@ class GameEngine(
     private var speedBonus = 0f
     private var cardIdCounter = 0
     private var bestScore = 0
+    private var wordPool: List<WordContent> = WordRepository.words
+    private var limited = false
     private var shuffledPool: ArrayDeque<WordContent> = ArrayDeque()
     private var recentlyShown: List<WordContent> = emptyList()
     private val missedWords = mutableListOf<WordContent>()
     private var missToken = 0
+    private var matchToken = 0
     private var fallSpeedScale = 1f
     private var spawnSpeedScale = 1f
     private var processingSlowdown = false
@@ -70,8 +73,8 @@ class GameEngine(
         }
 
         var lives = current.lives - fallen.size
-        val isGameOver = lives <= 0
-        if (isGameOver) lives = 0
+        val lostAllLives = lives <= 0
+        if (lostAllLives) lives = 0
 
         // Spawn new cards
         timeSinceLastSpawn += deltaTime * spawnSpeedScale
@@ -81,9 +84,11 @@ class GameEngine(
             timeSinceSpeedIncrease -= 20f
         }
         val updatedCards = alive.toMutableList()
-        if (timeSinceLastSpawn >= spawnInterval && !isGameOver) {
-            if (shuffledPool.isEmpty()) {
-                val allWords = WordRepository.words
+        if (timeSinceLastSpawn >= spawnInterval && !lostAllLives) {
+            // Infinite modes refill the pool endlessly; limited modes play each
+            // word once and let the pool run dry (see completion check below).
+            if (shuffledPool.isEmpty() && !limited) {
+                val allWords = wordPool
                 val recentSet = recentlyShown.toSet()
                 // Put recently shown words at the end so they don't repeat right away
                 val fresh = allWords.filter { it !in recentSet }.shuffled()
@@ -109,6 +114,13 @@ class GameEngine(
         spawnInterval = maxOf(3f, 6f - current.score * 0.05f)
         }
 
+        // Limited mode finishes once every word has been resolved (matched or
+        // missed) and nothing is left on screen — even with lives remaining.
+        val completed = limited && shuffledPool.isEmpty() && updatedCards.isEmpty()
+        val isGameOver = lostAllLives || completed
+        // A "win" is a finite session finished with no missed words.
+        val won = completed && missedWords.isEmpty()
+
         // Level progression
         val newLevel = when {
             current.score >= 30 -> 3
@@ -124,6 +136,7 @@ class GameEngine(
             activeCards = updatedCards,
             lives = lives,
             isGameOver = isGameOver,
+            won = won,
             level = newLevel,
             bestScore = if (current.score > bestScore) current.score else bestScore,
             lastMissedWord = lastFallenWord ?: current.lastMissedWord,
@@ -143,10 +156,13 @@ class GameEngine(
                 // Screen is empty — speed up next spawn to ~2 seconds from now
                 timeSinceLastSpawn = (spawnInterval - 2f).coerceIn(0f, spawnInterval)
             }
+            matchToken += 1
             _state.value = current.copy(
                 activeCards = remaining,
                 score = newScore,
                 bestScore = bestScore,
+                lastMatchedWord = matched.content,
+                lastMatchedToken = matchToken,
             )
             return true
         }
@@ -197,6 +213,26 @@ class GameEngine(
         return missedWords.toList()
     }
 
+    /**
+     * Swaps the pool of words the game spawns from (e.g. the player's saved
+     * words for a focused review session). Falls back to the full catalogue when
+     * given an empty list. When [limited] is true the game plays each word once
+     * and ends when the pool is exhausted (finite session); otherwise it spawns
+     * endlessly. Call [restart] afterwards to start a clean game.
+     */
+    fun setWordPool(words: List<WordContent>, limited: Boolean = false) {
+        wordPool = words.ifEmpty { WordRepository.words }
+        this.limited = limited
+        resetPool()
+    }
+
+    /** Rebuilds the spawn pool: pre-filled (shuffled) for limited mode, empty
+     *  (filled on demand) for endless mode. */
+    private fun resetPool() {
+        shuffledPool = if (limited) ArrayDeque(wordPool.shuffled()) else ArrayDeque()
+        recentlyShown = emptyList()
+    }
+
     fun restart() {
         spawnInterval = 6f
         timeSinceSpeedIncrease = 0f
@@ -204,10 +240,10 @@ class GameEngine(
         // Spawn first card immediately after restart
         timeSinceLastSpawn = spawnInterval
         cardIdCounter = 0
-        shuffledPool = ArrayDeque()
-        recentlyShown = emptyList()
+        resetPool()
         missedWords.clear()
         missToken = 0
+        matchToken = 0
         _state.value = GameState(bestScore = bestScore)
     }
 

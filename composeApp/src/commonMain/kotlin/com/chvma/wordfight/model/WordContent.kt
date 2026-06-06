@@ -9,6 +9,7 @@ data class WordContent(
     val translations: List<Translation>,
     val level: Int = 1,
     val res: DrawableResource,
+    val category: WordCategory = WordCategory.OTHER,
 ) {
     fun translationFor(language: AppLanguage): String {
         val translation = translations.firstOrNull() ?: return word

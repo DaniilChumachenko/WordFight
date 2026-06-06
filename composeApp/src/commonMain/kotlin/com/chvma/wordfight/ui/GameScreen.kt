@@ -8,6 +8,8 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
@@ -126,6 +128,9 @@ fun GameScreen(
     var previousLives by remember { mutableIntStateOf(state.lives) }
     var missedWord by remember { mutableStateOf(state.lastMissedWord) }
     var showMissed by remember { mutableStateOf(false) }
+    var matchedWord by remember { mutableStateOf(state.lastMatchedWord) }
+    var showMatched by remember { mutableStateOf(false) }
+    var showCongrats by remember { mutableStateOf(false) }
     var isSpeaking by remember { mutableStateOf(false) }
     var damageActive by remember { mutableStateOf(false) }
     var damageToken by remember { mutableIntStateOf(0) }
@@ -232,16 +237,29 @@ fun GameScreen(
         gameOverHandled,
     ) {
         if (state.isGameOver &&
-            state.lives <= 0 &&
             !showReviveDialog &&
             !reviveInProgress &&
             !gameOverHandled
         ) {
-            haptic.perform(HapticType.GameOver)
-            if (state.revivesUsed < GameEngine.MAX_REVIVES_PER_GAME) {
-                showReviveDialog = true
-            } else {
+            if (state.lives > 0) {
+                // Finite session completed. Pause before showing results so the
+                // player sees the outcome: a celebration if every word was
+                // guessed, otherwise time for the last missed-word feedback.
+                if (state.won) {
+                    showCongrats = true
+                    haptic.perform(HapticType.Correct)
+                    delay(1800)
+                } else {
+                    delay(1600)
+                }
                 finishGame()
+            } else {
+                haptic.perform(HapticType.GameOver)
+                if (state.revivesUsed < GameEngine.MAX_REVIVES_PER_GAME) {
+                    showReviveDialog = true
+                } else {
+                    finishGame()
+                }
             }
         }
     }
@@ -280,6 +298,16 @@ fun GameScreen(
         speechPlayer.speak(word.word)
         delay(2000)
         showMissed = false
+    }
+    // Positive feedback when a word is pronounced correctly.
+    LaunchedEffect(state.lastMatchedToken) {
+        if (state.lastMatchedToken == 0) return@LaunchedEffect
+        val word = state.lastMatchedWord ?: return@LaunchedEffect
+        matchedWord = word
+        showMatched = true
+        haptic.perform(HapticType.Correct)
+        delay(800)
+        showMatched = false
     }
 
     Scaffold(
@@ -423,6 +451,42 @@ fun GameScreen(
                 }
             }
 
+            AnimatedVisibility(
+                visible = showMatched && matchedWord != null,
+                enter = scaleIn(initialScale = 0.5f) + fadeIn(),
+                exit = scaleOut(targetScale = 1.4f) + fadeOut(),
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 24.dp),
+            ) {
+                val gradientBorder = Brush.linearGradient(
+                    colors = listOf(Color(0xFF7CFFB2), Color(0xFF2ECC71), Color(0xFF63D3FF)),
+                )
+                Column(
+                    modifier = Modifier
+                        .border(2.dp, gradientBorder, RoundedCornerShape(16.dp))
+                        .background(
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                            shape = RoundedCornerShape(16.dp),
+                        )
+                        .padding(horizontal = 24.dp, vertical = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        text = "+1",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = Color(0xFF2ECC71),
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = matchedWord?.word.orEmpty(),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
+
             AnimatedStatusBar(
                 mode = when {
                     damageActive -> StatusBarMode.Damage
@@ -434,6 +498,38 @@ fun GameScreen(
                     .fillMaxWidth()
                     .height(14.dp),
             )
+
+            // Celebration when a finite session is completed with every word guessed.
+            AnimatedVisibility(
+                visible = showCongrats,
+                enter = scaleIn(initialScale = 0.4f) + fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.Center),
+            ) {
+                val gradientBorder = Brush.linearGradient(
+                    colors = listOf(Color(0xFFFFD54F), Color(0xFF7CFFB2), Color(0xFF63D3FF)),
+                )
+                Column(
+                    modifier = Modifier
+                        .border(3.dp, gradientBorder, RoundedCornerShape(20.dp))
+                        .background(
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+                            shape = RoundedCornerShape(20.dp),
+                        )
+                        .padding(horizontal = 32.dp, vertical = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(text = "🎉", fontSize = 56.sp)
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = strings.completed,
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = Color(0xFF2ECC71),
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
 
             if (showReviveDialog) {
                 AlertDialog(

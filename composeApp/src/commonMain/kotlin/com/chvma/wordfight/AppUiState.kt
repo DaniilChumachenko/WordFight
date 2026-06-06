@@ -18,6 +18,9 @@ data class AppUiState(
     val isPlayerRegistered: Boolean = false,
     val bestScore: Int = 0,
     val lastScore: Int = 0,
+    val lastGameRanked: Boolean = true,
+    val lastGameWon: Boolean = false,
+    val lastSessionLabel: String = "",
     val missedWords: List<WordContent> = emptyList(),
     val leaderboard: LeaderboardUiState = LeaderboardUiState(),
 )

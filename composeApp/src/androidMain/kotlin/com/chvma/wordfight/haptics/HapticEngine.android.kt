@@ -18,6 +18,8 @@ class AndroidHapticEngine : HapticEngine {
         val v = vibrator ?: return
         if (!v.hasVibrator()) return
         when (type) {
+            // Crisp light double-tick — a "reward" feel, distinct from damage.
+            HapticType.Correct -> vibratePattern(longArrayOf(0, 20, 45, 20), intArrayOf(0, 160, 0, 220))
             HapticType.LifeLost -> vibrate(90)
             HapticType.GameOver -> vibrate(250)
         }
@@ -31,6 +33,20 @@ class AndroidHapticEngine : HapticEngine {
             } else {
                 @Suppress("DEPRECATION")
                 v.vibrate(durationMs)
+            }
+        } catch (_: SecurityException) {
+            // No permission or haptics disabled at system level
+        }
+    }
+
+    private fun vibratePattern(timings: LongArray, amplitudes: IntArray) {
+        val v = vibrator ?: return
+        try {
+            if (Build.VERSION.SDK_INT >= 26) {
+                v.vibrate(VibrationEffect.createWaveform(timings, amplitudes, -1))
+            } else {
+                @Suppress("DEPRECATION")
+                v.vibrate(timings, -1)
             }
         } catch (_: SecurityException) {
             // No permission or haptics disabled at system level

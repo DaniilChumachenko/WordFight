@@ -1,6 +1,7 @@
 package com.chvma.wordfight.content
 
 import com.chvma.wordfight.model.Translation
+import com.chvma.wordfight.model.WordCategory
 import com.chvma.wordfight.model.WordContent
 import org.jetbrains.compose.resources.DrawableResource
 import wordfight.composeapp.generated.resources.Res
@@ -15,7 +16,7 @@ import wordfight.composeapp.generated.resources.*
  * ([com.chvma.wordfight.storage.WordStorageImpl]); keep existing ids stable.
  */
 object WordRepository {
-    val words: List<WordContent> = listOf(
+    private val rawWords: List<WordContent> = listOf(
         // --- Animals ---
         word(1, "cat", "кошка", "кіт", "gato", "chat", 1, Res.drawable.cat_3d),
         word(2, "dog", "собака", "собака", "perro", "chien", 1, Res.drawable.dog_3d),
@@ -314,12 +315,49 @@ object WordRepository {
         word(273, "stopwatch", "секундомер", "секундомір", "cronómetro", "chronomètre", 3, Res.drawable.stopwatch_3d),
     )
 
+    /**
+     * Maps a word [id] to its [WordCategory]. The catalogue above is laid out in
+     * contiguous, category-ordered id blocks, so the category is derived from the
+     * id range rather than repeated on all 270+ entries. Keep these ranges in sync
+     * with the section comments above when adding words.
+     */
+    private fun categoryFor(id: Int): WordCategory = when (id) {
+        in 1..85 -> WordCategory.ANIMALS
+        in 86..114 -> WordCategory.FRUIT_VEG
+        in 115..143 -> WordCategory.FOOD
+        in 144..166 -> WordCategory.TRANSPORT
+        in 167..194 -> WordCategory.HOME
+        in 195..201 -> WordCategory.TOOLS
+        in 202..210 -> WordCategory.SCHOOL
+        in 211..222 -> WordCategory.ELECTRONICS
+        in 223..229 -> WordCategory.MUSIC
+        in 230..242 -> WordCategory.CLOTHING
+        in 243..252 -> WordCategory.SPORTS
+        in 253..273 -> WordCategory.NATURE
+        else -> WordCategory.OTHER
+    }
+
+    val words: List<WordContent> = rawWords.map { it.copy(category = categoryFor(it.id)) }
+
     private val wordsById: Map<Int, WordContent> = words.associateBy { it.id }
     private val wordsByWord: Map<String, WordContent> = words.associateBy { it.word }
 
     fun byId(id: Int): WordContent? = wordsById[id]
 
     fun byWord(word: String): WordContent? = wordsByWord[word]
+
+    /**
+     * Words to spawn for a focused session. [category] = null means all topics,
+     * [level] = null means all difficulties (1 = easy … 3 = hard).
+     */
+    fun wordsFor(category: WordCategory?, level: Int?): List<WordContent> =
+        words.filter { word ->
+            (category == null || word.category == category) &&
+                (level == null || word.level == level)
+        }
+
+    /** How many words exist for the given [category]/[level] filter. */
+    fun countFor(category: WordCategory?, level: Int?): Int = wordsFor(category, level).size
 
     private fun word(
         id: Int,
