@@ -2,6 +2,7 @@ import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.Framework
 import org.jetbrains.kotlin.gradle.targets.native.tasks.PodBuildTask
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -105,12 +106,17 @@ android {
     namespace = "com.chvma.pronounceWord"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
+    val localProperties = Properties().apply {
+        val f = rootProject.file("local.properties")
+        if (f.exists()) load(f.inputStream())
+    }
+
     signingConfigs {
         create("release") {
             storeFile = file("release-keystore.jks")
-            storePassword = "***REMOVED***"
-            keyAlias = "pronounceword"
-            keyPassword = "***REMOVED***"
+            storePassword = localProperties.getProperty("signing.storePassword")
+            keyAlias = localProperties.getProperty("signing.keyAlias")
+            keyPassword = localProperties.getProperty("signing.keyPassword")
         }
     }
 
