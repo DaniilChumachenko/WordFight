@@ -146,12 +146,23 @@ class GameEngine(
 
     fun tryMatch(spoken: String): Boolean {
         val current = _state.value
-        if (current.isGameOver || current.isPaused) return false
+        if (current.isGameOver || current.isPaused) {
+            logRecognition(
+                "Ignored transcript=\"$spoken\": gameOver=${current.isGameOver}, paused=${current.isPaused}",
+            )
+            return false
+        }
         val expectedWords = current.activeCards.map { it.content.word }
-        println("WordMatch: spoken=\"$spoken\" expected=$expectedWords")
-        val matched = current.activeCards.firstOrNull { wordMatcher.matches(spoken, it.content.word) }
+        logRecognition("Trying transcript=\"$spoken\" against activeWords=$expectedWords")
+        val evaluations = current.activeCards.map { card ->
+            card to wordMatcher.evaluate(spoken, card.content.word)
+        }
+        evaluations.forEach { (card, result) ->
+            logRecognition("Candidate target=\"${card.content.word}\": ${result.toLogString()}")
+        }
+        val matched = evaluations.firstOrNull { (_, result) -> result.matched }?.first
         if (matched != null) {
-            println("WordMatch: MATCHED spoken=\"$spoken\" -> expected=\"${matched.content.word}\"")
+            logRecognition("Accepted transcript=\"$spoken\" as target=\"${matched.content.word}\"")
             val newScore = current.score + 1
             if (newScore > bestScore) bestScore = newScore
             val remaining = current.activeCards - matched
@@ -169,7 +180,7 @@ class GameEngine(
             )
             return true
         }
-        println("WordMatch: NO MATCH for spoken=\"$spoken\"")
+        logRecognition("Rejected transcript=\"$spoken\": no active word matched")
         return false
     }
 

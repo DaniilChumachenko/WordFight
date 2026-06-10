@@ -2,26 +2,59 @@ package com.chvma.wordfight.engine
 
 import kotlin.math.abs
 
+data class WordMatchResult(
+    val matched: Boolean,
+    val strategy: String,
+    val spokenNormalized: String,
+    val targetNormalized: String,
+    val spokenCompact: String,
+    val targetCompact: String,
+    val aliases: Set<String>,
+    val tokenComparisons: List<String>,
+) {
+    fun toLogString(): String {
+        return buildString {
+            append("matched=$matched strategy=$strategy")
+            append(" normalized=\"$spokenNormalized\" -> \"$targetNormalized\"")
+            append(" compact=\"$spokenCompact\" -> \"$targetCompact\"")
+            if (aliases.isNotEmpty()) append(" aliases=$aliases")
+            if (tokenComparisons.isNotEmpty()) append(" tokens=[${tokenComparisons.joinToString()}]")
+        }
+    }
+}
+
 class WordMatcher {
-    fun matches(spoken: String, target: String): Boolean {
+    fun matches(spoken: String, target: String): Boolean = evaluate(spoken, target).matched
+
+    fun evaluate(spoken: String, target: String): WordMatchResult {
         val s = normalizePhrase(spoken)
         val t = normalizePhrase(target)
-
-        if (s.isBlank() || t.isBlank()) return false
-
-        if (containsWholePhrase(s, t) || compact(s) == compact(t)) return true
-
+        val spokenCompact = compact(s)
+        val targetCompact = compact(t)
         val targetAliases = aliasesFor(t)
-        if (targetAliases.any { alias ->
-                containsWholePhrase(s, alias) ||
-                    compact(s) == compact(alias) ||
-                    phraseFuzzyMatches(s, alias)
-            }
-        ) {
-            return true
+
+        val strategy = when {
+            s.isBlank() || t.isBlank() -> "blank_input"
+            containsWholePhrase(s, t) -> "whole_phrase"
+            spokenCompact == targetCompact -> "compact_exact"
+            targetAliases.any { containsWholePhrase(s, it) } -> "alias_whole_phrase"
+            targetAliases.any { spokenCompact == compact(it) } -> "alias_compact_exact"
+            targetAliases.any { phraseFuzzyMatches(s, it) } -> "alias_fuzzy"
+            phraseFinalConsonantVoicingMatches(s, t) -> "final_consonant_voicing"
+            phraseFuzzyMatches(s, t) -> "target_fuzzy"
+            else -> "no_match"
         }
 
-        return phraseFuzzyMatches(s, t)
+        return WordMatchResult(
+            matched = strategy != "blank_input" && strategy != "no_match",
+            strategy = strategy,
+            spokenNormalized = s,
+            targetNormalized = t,
+            spokenCompact = spokenCompact,
+            targetCompact = targetCompact,
+            aliases = targetAliases,
+            tokenComparisons = tokenComparisons(s, t),
+        )
     }
 
     private fun phraseFuzzyMatches(spoken: String, target: String): Boolean {
@@ -65,8 +98,49 @@ class WordMatcher {
         allowVowelOnsetMismatch: Boolean = false,
     ): Boolean {
         if (spoken == target) return true
+        if (finalConsonantVoicingMatches(spoken, target)) return true
         if (fuzzyMatches(spoken, target)) return true
         return phoneticMatches(spoken, target, allowVowelOnsetMismatch)
+    }
+
+    private fun phraseFinalConsonantVoicingMatches(spoken: String, target: String): Boolean {
+        val targetToken = words(target).singleOrNull() ?: return false
+        return words(spoken).any { spokenToken ->
+            tokenVariants(spokenToken).any { finalConsonantVoicingMatches(it, targetToken) }
+        }
+    }
+
+    /**
+     * ASR commonly flips the voicing of a final consonant while preserving the
+     * rest of a short word ("ant" -> "and", "bat" -> "bad"). Keep this rule
+     * narrow: the spelling before the final consonant must match exactly.
+     */
+    private fun finalConsonantVoicingMatches(spoken: String, target: String): Boolean {
+        if (spoken.length < 3 || spoken.length != target.length) return false
+        if (spoken.dropLast(1) != target.dropLast(1)) return false
+        return finalVoicingPairs.any { pair ->
+            spoken.last() in pair && target.last() in pair
+        }
+    }
+
+    private fun tokenComparisons(spoken: String, target: String): List<String> {
+        val spokenTokens = words(spoken)
+        val targetTokens = words(target)
+        return targetTokens.flatMap { targetToken ->
+            spokenTokens.map { spokenToken ->
+                val variants = tokenVariants(spokenToken)
+                val bestVariant = variants.minByOrNull { levenshtein(it, targetToken) } ?: spokenToken
+                val editDistance = levenshtein(bestVariant, targetToken)
+                val spokenKey = phoneticKey(bestVariant)
+                val targetKey = phoneticKey(targetToken)
+                val phoneticDistance = levenshtein(spokenKey, targetKey)
+                "$spokenToken->$targetToken(" +
+                    "variant=$bestVariant,edit=$editDistance," +
+                    "phonetic=$spokenKey/$targetKey:$phoneticDistance," +
+                    "finalVoicing=${finalConsonantVoicingMatches(bestVariant, targetToken)}," +
+                    "match=${spokenTokenMatches(spokenToken, targetToken)})"
+            }
+        }
     }
 
     private fun fuzzyMatches(spoken: String, target: String): Boolean {
@@ -154,7 +228,11 @@ class WordMatcher {
             value.startsWith("ph") -> "f" + value.drop(2)
             else -> value
         }
-        return normalized.first()
+        return when (normalized.first()) {
+            'c' -> if (normalized.getOrNull(1) in softCFollowers) 's' else 'k'
+            'q' -> 'k'
+            else -> normalized.first()
+        }
     }
 
     private fun isVowelOnset(value: String): Boolean = value.firstOrNull() in vowelChars
@@ -194,6 +272,14 @@ class WordMatcher {
 
     private companion object {
         val vowelChars = "aeiouy".toSet()
+        val softCFollowers = "eiy".toSet()
+        val finalVoicingPairs = listOf(
+            setOf('t', 'd'),
+            setOf('p', 'b'),
+            setOf('k', 'g'),
+            setOf('f', 'v'),
+            setOf('s', 'z'),
+        )
 
         val asrAliases = mapOf(
             "plate" to setOf("play", "played", "plait"),

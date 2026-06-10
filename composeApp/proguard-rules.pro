@@ -36,10 +36,6 @@
 -keep class com.google.android.gms.** { *; }
 -dontwarn com.google.android.gms.**
 
-# --- Moonshine (Speech Recognition) ---
--keep class ai.moonshine.voice.** { *; }
--keepclassmembers class ai.moonshine.voice.** { *; }
-
 # --- App models (keep data classes used with Firebase) ---
 -keepclassmembers class com.chvma.wordfight.leaderboard.** { *; }
 -keepclassmembers class com.chvma.wordfight.model.** { *; }

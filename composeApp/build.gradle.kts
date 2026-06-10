@@ -76,7 +76,8 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
-            implementation(libs.moonshine.voice)
+            implementation("com.alphacephei:vosk-android:0.3.75@aar")
+            implementation("net.java.dev.jna:jna:5.18.1@aar")
             implementation(libs.androidx.appcompat)
             implementation("androidx.compose.material:material-icons-extended:1.6.8")
             implementation(libs.admob)
