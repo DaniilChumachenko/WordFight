@@ -40,6 +40,7 @@ class FirebaseCloudLeaderboardStubDataSource : LeaderboardRemoteDataSource {
         val random = Random(seed)
         return botNames.mapIndexed { index, name ->
             val language = AppLanguage.supported[random.nextInt(AppLanguage.supported.size)]
+            val countryCode = countryCodes[random.nextInt(countryCodes.size)]
             val score = when (period) {
                 LeaderboardPeriod.TODAY -> 60 - index + random.nextInt(0, 6)
                 LeaderboardPeriod.ALL_TIME -> 320 - index * 3 + random.nextInt(0, 9)
@@ -48,6 +49,7 @@ class FirebaseCloudLeaderboardStubDataSource : LeaderboardRemoteDataSource {
                 playerId = "bot_${period.name.lowercase()}_$index",
                 name = name,
                 languageCode = language.code,
+                countryCode = countryCode,
                 score = score,
             )
         }
@@ -61,6 +63,10 @@ class FirebaseCloudLeaderboardStubDataSource : LeaderboardRemoteDataSource {
             "Alex", "Mila", "Ilya", "Olivia", "Noah", "Dany", "Emma", "Liam", "Lucas", "Sofia",
             "Ethan", "Ava", "Mason", "Amelia", "James", "Mia", "Logan", "Ella", "Henry", "Luna",
             "Jack", "Aria", "Leo", "Nora", "Mark", "Iris", "Owen", "Eva", "Ryan", "Zoe",
+        )
+
+        val countryCodes = listOf(
+            "US", "UA", "PL", "DE", "FR", "ES", "IT", "GB", "CA", "BR",
         )
     }
 }

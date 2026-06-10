@@ -6,6 +6,7 @@ import com.chvma.wordfight.storage.SettingsStorage
 class LeaderboardRepository(
     private val settingsStorage: SettingsStorage,
     private val remoteDataSource: LeaderboardRemoteDataSource,
+    private val countryCodeProvider: () -> String? = ::currentCountryCode,
 ) {
     suspend fun syncAllTimeBaseline(score: Int) {
         if (score <= 0) return
@@ -101,6 +102,7 @@ class LeaderboardRepository(
                 playerId = record.playerId,
                 name = record.name,
                 language = AppLanguage.fromCode(record.languageCode),
+                countryCode = normalizeCountryCode(record.countryCode),
                 score = record.score,
                 isCurrentPlayer = record.playerId == profile.playerId,
             )
@@ -130,6 +132,7 @@ class LeaderboardRepository(
             playerId = playerId,
             name = name,
             language = language,
+            countryCode = normalizeCountryCode(countryCodeProvider()),
         )
     }
 
@@ -147,12 +150,14 @@ class LeaderboardRepository(
         val playerId: String,
         val name: String,
         val language: AppLanguage,
+        val countryCode: String,
     ) {
         fun toRemote(score: Int): RemoteLeaderboardRecord {
             return RemoteLeaderboardRecord(
                 playerId = playerId,
                 name = name,
                 languageCode = language.code,
+                countryCode = countryCode,
                 score = score.coerceAtLeast(0),
             )
         }

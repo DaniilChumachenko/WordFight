@@ -34,6 +34,8 @@ import androidx.compose.ui.unit.sp
 import com.chvma.wordfight.ads.BannerAdView
 import com.chvma.wordfight.leaderboard.LeaderboardEntry
 import com.chvma.wordfight.leaderboard.LeaderboardPeriod
+import com.chvma.wordfight.leaderboard.countryFlagEmoji
+import com.chvma.wordfight.leaderboard.usesCountryInLeaderboard
 import com.chvma.wordfight.localization.AppStrings
 import kotlinx.coroutines.delay
 
@@ -185,6 +187,7 @@ private fun LeaderboardRow(
     strings: AppStrings,
     highlight: Float = 0f,
 ) {
+    val showCountry = usesCountryInLeaderboard()
     val containerColor = if (entry.isCurrentPlayer) {
         MaterialTheme.colorScheme.primary.copy(alpha = 0.16f + 0.44f * highlight)
     } else {
@@ -205,7 +208,11 @@ private fun LeaderboardRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "${entry.rank}. ${entry.name}",
+                text = if (showCountry) {
+                    "${entry.rank}. ${countryFlagEmoji(entry.countryCode)} ${entry.name}"
+                } else {
+                    "${entry.rank}. ${entry.name}"
+                },
                 color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = if (entry.isCurrentPlayer) FontWeight.Bold else FontWeight.SemiBold,
                 fontSize = 17.sp,
@@ -217,11 +224,13 @@ private fun LeaderboardRow(
                 fontSize = 15.sp,
             )
         }
-        Text(
-            text = "${strings.leaderboardLanguage}: ${entry.language.nativeName}",
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-            fontSize = 13.sp,
-        )
+        if (!showCountry) {
+            Text(
+                text = "${strings.leaderboardLanguage}: ${entry.language.nativeName}",
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                fontSize = 13.sp,
+            )
+        }
     }
 }
 

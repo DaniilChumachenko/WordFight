@@ -12,6 +12,7 @@ data class LeaderboardEntry(
     val playerId: String,
     val name: String,
     val language: AppLanguage,
+    val countryCode: String,
     val score: Int,
     val isCurrentPlayer: Boolean,
 )
@@ -21,4 +22,5 @@ data class RemoteLeaderboardRecord(
     val name: String,
     val languageCode: String,
     val score: Int,
+    val countryCode: String = "",
 )

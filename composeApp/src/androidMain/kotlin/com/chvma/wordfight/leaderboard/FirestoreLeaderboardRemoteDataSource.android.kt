@@ -1,7 +1,6 @@
 package com.chvma.wordfight.leaderboard
 
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.tasks.await
 
 private const val ALL_TIME_COLLECTION = "leaderboard_all_time"
@@ -35,14 +34,14 @@ class FirestoreLeaderboardRemoteDataSource(
         val payload = hashMapOf<String, Any>(
             "playerId" to record.playerId,
             "name" to record.name,
-            "languageCode" to record.languageCode,
+            "countryCode" to record.countryCode,
             "score" to bestScore,
         )
         if (period == LeaderboardPeriod.TODAY) {
             payload["dayKey"] = normalizedDayKey
         }
 
-        document.set(payload, SetOptions.merge()).await()
+        document.set(payload).await()
     }
 
     override suspend fun getRecords(
@@ -66,12 +65,13 @@ class FirestoreLeaderboardRemoteDataSource(
         return snapshot.documents.mapNotNull { document ->
             val playerId = document.getString("playerId") ?: return@mapNotNull null
             val name = document.getString("name") ?: return@mapNotNull null
-            val languageCode = document.getString("languageCode") ?: return@mapNotNull null
+            val countryCode = document.getString("countryCode").orEmpty()
             val score = document.getLong("score")?.toInt() ?: 0
             RemoteLeaderboardRecord(
                 playerId = playerId,
                 name = name,
-                languageCode = languageCode,
+                languageCode = "",
+                countryCode = countryCode,
                 score = score,
             )
         }
