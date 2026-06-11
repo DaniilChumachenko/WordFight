@@ -40,6 +40,16 @@
 -keepclassmembers class com.chvma.wordfight.leaderboard.** { *; }
 -keepclassmembers class com.chvma.wordfight.model.** { *; }
 
+# --- JNA (required by Vosk) ---
+-keep class com.sun.jna.** { *; }
+-keep class * implements com.sun.jna.** { *; }
+-keepclassmembers class com.sun.jna.** { *; }
+-dontwarn com.sun.jna.**
+
+# --- Vosk ---
+-keep class org.vosk.** { *; }
+-dontwarn org.vosk.**
+
 # --- General ---
 -keepattributes Signature
 -keepattributes Exceptions

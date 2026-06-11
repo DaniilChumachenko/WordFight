@@ -11,6 +11,8 @@ gradle.properties
 captures
 .externalNativeBuild
 .cxx
+.aab
+.apk
 *.xcodeproj/*
 !*.xcodeproj/project.pbxproj
 !*.xcodeproj/xcshareddata/
