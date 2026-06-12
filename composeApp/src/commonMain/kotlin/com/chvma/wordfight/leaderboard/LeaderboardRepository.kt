@@ -2,6 +2,7 @@ package com.chvma.wordfight.leaderboard
 
 import com.chvma.wordfight.localization.AppLanguage
 import com.chvma.wordfight.storage.SettingsStorage
+import kotlin.coroutines.cancellation.CancellationException
 
 class LeaderboardRepository(
     private val settingsStorage: SettingsStorage,
@@ -55,16 +56,35 @@ class LeaderboardRepository(
 
     private suspend fun pushBestsToRemote(dayKey: Long) {
         val profile = getOrCreateProfile()
-        remoteDataSource.upsertBestScore(
-            period = LeaderboardPeriod.ALL_TIME,
-            dayKey = null,
-            record = profile.toRemote(settingsStorage.getBestAllTimeScore()),
-        )
-        remoteDataSource.upsertBestScore(
-            period = LeaderboardPeriod.TODAY,
-            dayKey = dayKey,
-            record = profile.toRemote(settingsStorage.getBestDailyScore()),
-        )
+        val bestAllTime = settingsStorage.getBestAllTimeScore()
+        val bestDaily = settingsStorage.getBestDailyScore()
+        // A network failure must never crash the caller (game over happens
+        // offline too, and Firestore transactions require connectivity). The
+        // local bests stay the source of truth and are re-pushed by the
+        // self-heal on the next leaderboard read.
+        try {
+            // Zero scores never reach the server: a player who registered but
+            // has not finished a game yet would otherwise litter the rating
+            // with empty records.
+            if (bestAllTime > 0) {
+                remoteDataSource.upsertBestScore(
+                    period = LeaderboardPeriod.ALL_TIME,
+                    dayKey = null,
+                    record = profile.toRemote(bestAllTime),
+                )
+            }
+            if (bestDaily > 0) {
+                remoteDataSource.upsertBestScore(
+                    period = LeaderboardPeriod.TODAY,
+                    dayKey = dayKey,
+                    record = profile.toRemote(bestDaily),
+                )
+            }
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (error: Exception) {
+            println("LeaderboardRepository: failed to push best scores: $error")
+        }
     }
 
     suspend fun getLeaderboardWindow(period: LeaderboardPeriod): List<LeaderboardEntry> {
@@ -75,18 +95,46 @@ class LeaderboardRepository(
             LeaderboardPeriod.ALL_TIME -> settingsStorage.getBestAllTimeScore()
         }
 
-        remoteDataSource.upsertBestScore(
-            period = period,
-            dayKey = if (period == LeaderboardPeriod.TODAY) dayKey else null,
-            record = profile.toRemote(localScore),
-        )
+        // null = fetch failed (offline, missing index, backend error). The
+        // screen then degrades to the local best instead of crashing the app.
+        val records: List<RemoteLeaderboardRecord>? = try {
+            remoteDataSource.getRecords(
+                period = period,
+                dayKey = if (period == LeaderboardPeriod.TODAY) dayKey else null,
+            )
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (error: Exception) {
+            println("LeaderboardRepository: failed to fetch leaderboard: $error")
+            null
+        }
 
-        val records = remoteDataSource.getRecords(
-            period = period,
-            dayKey = if (period == LeaderboardPeriod.TODAY) dayKey else null,
-        )
+        // Self-heal: push the local best only when the server clearly lags
+        // behind (e.g. a submission after a game failed). Writing on every
+        // read would double the round-trips for no benefit. Skipped when the
+        // fetch failed — the connection is likely down anyway.
+        if (records != null) {
+            val remoteSelfScore = records.firstOrNull { it.playerId == profile.playerId }?.score ?: 0
+            if (localScore > remoteSelfScore) {
+                try {
+                    remoteDataSource.upsertBestScore(
+                        period = period,
+                        dayKey = if (period == LeaderboardPeriod.TODAY) dayKey else null,
+                        record = profile.toRemote(localScore),
+                    )
+                } catch (cancellation: CancellationException) {
+                    throw cancellation
+                } catch (error: Exception) {
+                    println("LeaderboardRepository: failed to self-heal score: $error")
+                }
+            }
+        }
 
-        val merged = records
+        val merged = records.orEmpty()
+            // Hide legacy zero-score records already in the database; the
+            // current player is re-added from the local best below, so they
+            // always see themselves even with 0 points.
+            .filter { it.score > 0 }
             .plus(profile.toRemote(localScore))
             .groupBy { it.playerId }
             .values

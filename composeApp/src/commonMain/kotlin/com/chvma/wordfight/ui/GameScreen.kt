@@ -118,6 +118,7 @@ fun GameScreen(
     onToggleMusic: () -> Unit,
     language: AppLanguage,
     strings: AppStrings,
+    showBannerAd: Boolean,
     onPauseWithAd: (onResult: (rewarded: Boolean) -> Unit) -> Unit,
     onReviveWithAd: (onResult: (rewarded: Boolean) -> Unit) -> Unit,
 ) {
@@ -138,6 +139,7 @@ fun GameScreen(
     var reviveInProgress by remember { mutableStateOf(false) }
     var gameOverHandled by remember { mutableStateOf(false) }
     var autoPausedByLifecycle by remember { mutableStateOf(false) }
+    var pauseAdInProgress by remember { mutableStateOf(false) }
     var appWasBackgrounded by remember { mutableStateOf(false) }
     val lifecycleOwner = LocalLifecycleOwner.current
     val latestState by rememberUpdatedState(state)
@@ -341,12 +343,31 @@ fun GameScreen(
                             )
                             .padding(vertical = 6.dp, horizontal = 10.dp)
                             .clickable {
-                                if (state.isPaused) {
+                                if (pauseAdInProgress) {
+                                    // The rewarded ad is loading or showing; the
+                                    // callback below decides how the pause ends.
+                                } else if (state.isPaused) {
                                     gameEngine.resume()
                                 } else if (gameEngine.canUsePause()) {
+                                    // Freeze the game right away: the engine keeps
+                                    // running behind the fullscreen ad otherwise,
+                                    // and falling words would cost lives while the
+                                    // player is watching.
+                                    gameEngine.pause()
+                                    pauseAdInProgress = true
                                     onPauseWithAd { rewarded ->
+                                        pauseAdInProgress = false
+                                        // Clear the auto-pause flag so the lifecycle
+                                        // handler does not override this decision
+                                        // after the ad closes.
+                                        autoPausedByLifecycle = false
                                         if (rewarded) {
+                                            // Convert the pre-pause into the earned
+                                            // limited pause (counts toward the cap).
                                             gameEngine.pauseWithLimit()
+                                        } else {
+                                            // Ad dismissed or unavailable: no pause.
+                                            gameEngine.resume()
                                         }
                                     }
                                 }
@@ -386,7 +407,11 @@ fun GameScreen(
             )
         },
         bottomBar = {
-            BannerAdView()
+            // No ad requests before the SDK is initialized (which on Android
+            // also implies UMP consent has been gathered).
+            if (showBannerAd) {
+                BannerAdView()
+            }
         },
     ) { paddingValues ->
         Box(
@@ -550,7 +575,14 @@ fun GameScreen(
                                 onReviveWithAd { rewarded ->
                                     reviveInProgress = false
                                     if (rewarded) {
-                                        if (!gameEngine.reviveOneLife()) {
+                                        if (gameEngine.reviveOneLife()) {
+                                            // The rewarded ad covered the activity, so ON_STOP
+                                            // stopped the speech engine, and ON_START skipped the
+                                            // restart because the game was still over at that
+                                            // point. Restart it here; start() is a no-op if the
+                                            // engine is already running.
+                                            speechEngine.start("en-US")
+                                        } else {
                                             finishGame()
                                         }
                                     } else {

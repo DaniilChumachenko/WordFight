@@ -126,6 +126,7 @@ fun App(isSdkReady: Boolean = true) {
                             onToggleMusic = { viewModel.toggleGameMusic() },
                             language = uiState.language,
                             strings = strings,
+                            showBannerAd = isSdkReady,
                             onPauseWithAd = { onResult -> viewModel.showPauseAd(onResult) },
                             onReviveWithAd = { onResult -> viewModel.showReviveAd(onResult) },
                         )

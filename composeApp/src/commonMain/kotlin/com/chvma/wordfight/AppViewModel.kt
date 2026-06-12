@@ -18,6 +18,7 @@ import com.chvma.wordfight.speech.createPermissionManager
 import com.chvma.wordfight.speech.createSpeechEngine
 import com.chvma.wordfight.storage.createSettingsStorage
 import com.chvma.wordfight.storage.createWordStorage
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -209,8 +210,17 @@ class AppViewModel : ViewModel() {
     fun loadLeaderboard(period: LeaderboardPeriod) {
         _uiState.update { it.copy(leaderboard = it.leaderboard.copy(period = period, isLoading = true)) }
         viewModelScope.launch {
-            val entries = withContext(Dispatchers.Default) {
-                leaderboardRepository.getLeaderboardWindow(period)
+            // Last line of defence: an uncaught exception here kills the whole
+            // process, so degrade to an empty table instead.
+            val entries = try {
+                withContext(Dispatchers.Default) {
+                    leaderboardRepository.getLeaderboardWindow(period)
+                }
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (error: Exception) {
+                println("AppViewModel: leaderboard load failed: $error")
+                emptyList()
             }
             _uiState.update {
                 it.copy(leaderboard = it.leaderboard.copy(period = period, entries = entries, isLoading = false))

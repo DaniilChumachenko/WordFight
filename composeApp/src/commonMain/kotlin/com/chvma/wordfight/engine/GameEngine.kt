@@ -188,9 +188,15 @@ class GameEngine(
         _state.value = _state.value.copy(isPaused = true)
     }
 
+    /**
+     * Consumes one of the limited pauses. Unlike [canUsePause], an already
+     * paused game is allowed here: the game screen freezes the engine with a
+     * plain [pause] while the rewarded ad is on top and then converts that
+     * hold into the earned pause via this method.
+     */
     fun pauseWithLimit(): Boolean {
         val current = _state.value
-        if (!canUsePause()) return false
+        if (current.isGameOver || current.pausesUsed >= MAX_PAUSES_PER_GAME) return false
         _state.value = current.copy(
             isPaused = true,
             pausesUsed = current.pausesUsed + 1,

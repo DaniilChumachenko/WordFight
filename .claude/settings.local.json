@@ -35,7 +35,8 @@
       "PowerShell(.\\\\gradlew.bat :composeApp:compileDebugKotlinAndroid -q 2>&1 | Select-Object -Last 20)",
       "WebFetch(domain:www.speak.com)",
       "Bash(git remote *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Skill(android-review)"
     ]
   }
 }

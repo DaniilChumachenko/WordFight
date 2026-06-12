@@ -81,6 +81,7 @@ kotlin {
             implementation(libs.androidx.appcompat)
             implementation("androidx.compose.material:material-icons-extended:1.6.8")
             implementation(libs.admob)
+            implementation(libs.google.ump)
             implementation(libs.firebase.firestore.ktx)
             implementation(libs.kotlinx.coroutines.play.services)
         }
@@ -132,6 +133,9 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+    }
+    buildFeatures {
+        buildConfig = true
     }
     buildTypes {
         getByName("release") {
